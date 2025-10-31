@@ -56,5 +56,29 @@ const CONFIG = {
     TEXT_SHORT: 150,
     TEXT_LONG: 250,
     URL: 200
+  },
+
+  // Dify API設定
+  DIFY: {
+    // API設定はスクリプトプロパティに保存
+    // PropertiesService.getScriptProperties().getProperty('DIFY_API_URL')
+    // PropertiesService.getScriptProperties().getProperty('DIFY_API_KEY')
+
+    TIMEOUT: 30000, // タイムアウト（ミリ秒）
+    RETRY_COUNT: 3,  // リトライ回数
+    RETRY_DELAY: 1000 // リトライ間隔（ミリ秒）
+  },
+
+  // Webhook設定
+  WEBHOOK: {
+    VALID_TYPES: [
+      'evaluation',
+      'engagement',
+      'evidence',
+      'risk',
+      'next_q',
+      'acceptance_story',
+      'competitor_comparison'
+    ]
   }
 };
