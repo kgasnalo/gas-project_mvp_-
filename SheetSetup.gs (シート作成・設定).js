@@ -123,6 +123,12 @@ function setupCandidatesMaster() {
     sheet.getRange('Y2:Z1000').setWrap(true);  // コアモチベーション、主要懸念事項
     sheet.getRange('AJ2:AJ1000').setWrap(true); // 次推奨アクション
 
+    // ========== 自動計算列のデータ検証をクリア ==========
+    // U列（予測の信頼度）とAL列（アクション緊急度）は自動計算列のため、
+    // データ検証が設定されているとエラーになるのでクリアする
+    sheet.getRange('U2:U1000').clearDataValidations();
+    sheet.getRange('AL2:AL1000').clearDataValidations();
+
     // ========== 自動計算列の関数設定 ==========
 
     // H列: 最新_合格可能性

@@ -42,23 +42,10 @@ function setupCandidatesMasterValidation() {
     CONFIG.VALIDATION_OPTIONS.CATEGORY,
     '新卒または中途を選択してください'
   );
-  
-  // U列: 予測の信頼度
-  setDropdownValidation(
-    sheet,
-    'U2:U1000',
-    CONFIG.VALIDATION_OPTIONS.CONFIDENCE,
-    '信頼度を選択してください'
-  );
-  
-  // AL列: アクション緊急度
-  setDropdownValidation(
-    sheet,
-    'AL2:AL1000',
-    CONFIG.VALIDATION_OPTIONS.URGENCY,
-    '緊急度を選択してください'
-  );
-  
+
+  // U列: 予測の信頼度 - 自動計算列のためデータ検証なし（Phase 1で関数を設定）
+  // AL列: アクション緊急度 - 自動計算列のためデータ検証なし（Phase 1で関数を設定）
+
   // AM列: アクション実行状況
   setDropdownValidation(
     sheet,
