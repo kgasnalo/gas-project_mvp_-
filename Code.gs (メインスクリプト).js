@@ -75,6 +75,11 @@ function onOpen() {
     .addSeparator()
     .addItem('📊 Dashboardを再生成', 'setupDashboardComplete') // 追加
     .addSeparator()
+    .addSubMenu(ui.createMenu('🔗 Dify連携')
+      .addItem('⚙️ API設定', 'setupDifyApiSettings')
+      .addItem('📡 Webhook URL確認', 'showWebhookUrl')
+      .addItem('🧪 Webhookテスト', 'testWebhook'))
+    .addSeparator()
     .addItem('🔄 データ検証を再設定', 'setupAllDataValidation')
     .addItem('🎨 条件付き書式を再設定', 'setupAllConditionalFormatting')
     .addItem('📊 初期データを再投入', 'insertAllInitialData')
