@@ -122,8 +122,104 @@ function setupCandidatesMaster() {
     // テキストの折り返しを設定
     sheet.getRange('Y2:Z1000').setWrap(true);  // コアモチベーション、主要懸念事項
     sheet.getRange('AJ2:AJ1000').setWrap(true); // 次推奨アクション
-    
+
+    // ========== 自動計算列の関数設定 ==========
+
+    // H列: 最新_合格可能性
+    sheet.getRange('H2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT Q WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+
+    // I列: 前回_合格可能性
+    sheet.getRange('I2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT Q WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1 OFFSET 1", 0), 0)');
+
+    // J列: 合格可能性_増減
+    sheet.getRange('J2').setFormula('=IF(OR(H2="", I2=""), "", H2-I2)');
+
+    // K列: 最新_合計スコア
+    sheet.getRange('K2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT G WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+
+    // L列: 最新_Philosophy
+    sheet.getRange('L2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT H WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+
+    // M列: 最新_Strategy
+    sheet.getRange('M2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT J WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+
+    // N列: 最新_Motivation
+    sheet.getRange('N2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT L WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+
+    // O列: 最新_Execution
+    sheet.getRange('O2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT N WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+
+    // P列: 最新_承諾可能性（AI予測）
+    sheet.getRange('P2').setFormula('=IFERROR(QUERY(Engagement_Log!A:U, "SELECT G WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+
+    // R列: 最新_承諾可能性（統合）
+    sheet.getRange('R2').setFormula('=IF(OR(P2="", Q2=""), "", P2*0.7 + Q2*0.3)');
+
+    // S列: 前回_承諾可能性
+    sheet.getRange('S2').setFormula('=IFERROR(QUERY(Engagement_Log!A:U, "SELECT G WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1 OFFSET 1", 0), 0)');
+
+    // T列: 承諾可能性_増減
+    sheet.getRange('T2').setFormula('=IF(OR(P2="", S2=""), "", P2-S2)');
+
+    // U列: 予測の信頼度
+    sheet.getRange('U2').setFormula('=IF(P2="", "", IF(ABS(P2-IFERROR(QUERY(Engagement_Log!A:U, "SELECT F WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)) < 10, "高", IF(ABS(P2-IFERROR(QUERY(Engagement_Log!A:U, "SELECT F WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)) < 20, "中", "低")))');
+
+    // V列: 志望度スコア
+    sheet.getRange('V2').setFormula('=IFERROR(QUERY(Survey_Response!A:H, "SELECT E WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0)*10, 0)');
+
+    // W列: 競合優位性スコア
+    sheet.getRange('W2').setFormula('=IFERROR(QUERY(Engagement_Log!A:U, "SELECT Q WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+
+    // X列: 懸念解消度スコア
+    sheet.getRange('X2').setFormula('=IFERROR(QUERY(Engagement_Log!A:U, "SELECT L WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+
+    // Y列: コアモチベーション
+    sheet.getRange('Y2').setFormula('=IFERROR(QUERY(Engagement_Log!A:U, "SELECT M WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), "")');
+
+    // Z列: 主要懸念事項
+    sheet.getRange('Z2').setFormula('=IFERROR(QUERY(Engagement_Log!A:U, "SELECT N WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), "")');
+
+    // AA列: 競合企業1
+    sheet.getRange('AA2').setFormula('=IFERROR(INDEX(SPLIT(QUERY(Engagement_Log!A:U, "SELECT P WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), "、"), 1), "")');
+
+    // AB列: 競合企業2
+    sheet.getRange('AB2').setFormula('=IFERROR(INDEX(SPLIT(QUERY(Engagement_Log!A:U, "SELECT P WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), "、"), 2), "")');
+
+    // AC列: 競合企業3
+    sheet.getRange('AC2').setFormula('=IFERROR(INDEX(SPLIT(QUERY(Engagement_Log!A:U, "SELECT P WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), "、"), 3), "")');
+
+    // AD列: 自社の志望順位
+    sheet.getRange('AD2').setFormula('=IFERROR(QUERY(Survey_Response!A:H, "SELECT G WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), "不明")');
+
+    // AE列: 前回接点日
+    sheet.getRange('AE2').setFormula('=IFERROR(QUERY(Contact_History!A:H, "SELECT D WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), "")');
+
+    // AF列: 前回接点からの空白期間
+    sheet.getRange('AF2').setFormula('=IF(AE2="", "", TODAY()-AE2)');
+
+    // AG列: 接点回数
+    sheet.getRange('AG2').setFormula('=COUNTIF(Contact_History!B:B, A2)');
+
+    // AH列: 平均接点間隔
+    sheet.getRange('AH2').setFormula('=IF(AG2<=1, "", ROUND((TODAY()-G2)/AG2, 1))');
+
+    // AJ列: 次推奨アクション
+    sheet.getRange('AJ2').setFormula('=IFERROR(QUERY(Engagement_Log!A:U, "SELECT R WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), "")');
+
+    // AK列: アクション期限
+    sheet.getRange('AK2').setFormula('=IFERROR(QUERY(Engagement_Log!A:U, "SELECT S WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), "")');
+
+    // AL列: アクション緊急度
+    sheet.getRange('AL2').setFormula('=IF(C2="最終面接", "CRITICAL", IF(C2="2次面接", IF(AF2>=7, "HIGH", "NORMAL"), IF(C2="1次面接", IF(AF2>=14, "HIGH", "NORMAL"), "LOW")))');
+
+    // AO列: 注力度合いスコア
+    sheet.getRange('AO2').setFormula('=IF(OR(H2="", R2=""), "", H2/100 * R2/100 * AP2)');
+
+    // AP列: 緊急度係数
+    sheet.getRange('AP2').setFormula('=IF(C2="最終面接", 3.0, IF(C2="2次面接", 2.0, IF(C2="1次面接", 1.5, 1.0))) + IF(AF2>=14, 1.0, IF(AF2>=7, 0.5, 0))');
+
     Logger.log('✅ Candidates_Masterシートのセットアップが完了しました');
+    Logger.log('✅ Candidates_Masterの自動計算列を設定しました');
     
   } catch (error) {
     logError('setupCandidatesMaster', error);
