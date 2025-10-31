@@ -955,12 +955,12 @@ function setupDashboardComplete() {
   
   currentRow++;
   
-  // QUERY関数でデータを抽出（修正版：CASE WHENを削除）
-  const actionQuery = `=QUERY(Candidates_Master!A:AN, 
-    "SELECT AL, B, C, R, AJ, AK, AN 
-     WHERE C != '辞退' AND C != '見送り' AND C != '承諾' 
-     AND (AL = 'CRITICAL' OR AL = 'HIGH') 
-     ORDER BY AL DESC, AK ASC 
+  // QUERY関数でデータを抽出（修正版：ORDER BY を期限順のみに簡略化）
+  const actionQuery = `=QUERY(Candidates_Master!A:AN,
+    "SELECT AL, B, C, R, AJ, AK, AN
+     WHERE C != '辞退' AND C != '見送り' AND C != '承諾'
+     AND (AL = 'CRITICAL' OR AL = 'HIGH')
+     ORDER BY AK ASC
      LIMIT 10", 0)`;
   
   sheet.getRange(`A${currentRow}`).setFormula(actionQuery);
