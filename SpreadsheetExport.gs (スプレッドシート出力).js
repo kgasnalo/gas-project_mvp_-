@@ -9,18 +9,25 @@
  * - 全セルの値・数式・メモの取得
  * - 全セルの書式情報の取得
  * - JSON形式での出力
+ * - Google Driveへの自動保存
  *
- * 使い方：
- * 1. このスクリプトをGASエディタにコピー
- * 2. スプレッドシートを開いた状態で実行
- * 3. 「実行ログ」（Ctrl+Enter）で出力を確認
+ * 【推奨】最も簡単な使い方：
+ * 1. GASエディタで関数一覧から「exportToFile」を選択
+ * 2. 「実行」ボタンをクリック
+ * 3. 実行ログ（Ctrl+Enter）に表示されるURLをクリック
+ * 4. Google DriveでJSONファイルを確認・ダウンロード
+ *
+ * その他の使い方：
+ * - getUltraCompleteData(): Logger.logに出力（小規模データ向け）
+ * - getBasicSpreadsheetInfo(): 基本情報のみ取得（テスト用）
  *
  * オプション：
  * - maxCellsPerSheet: シートあたりの最大セル数制限（デフォルト: 100000）
  * - includeEmptyCells: 空セルを含めるかどうか（デフォルト: false）
+ * - filename: 保存するファイル名（デフォルト: 自動生成）
  *
  * @author GAS Project
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 /**
@@ -366,6 +373,77 @@ function saveToGoogleDrive(data, filename = 'spreadsheet_export.json') {
 }
 
 /**
+ * 【推奨】スプレッドシート全体をGoogle Driveに保存する関数
+ * ワンクリックで完全なJSON出力をGoogle Driveに保存します
+ *
+ * この関数を実行するだけで、スプレッドシートの全情報がJSONファイルとして保存されます。
+ * 実行ログにファイルのURLが表示されるので、そこからダウンロード・閲覧できます。
+ *
+ * @param {Object} options - オプション設定（省略可能）
+ * @param {string} options.filename - ファイル名（デフォルト: 自動生成）
+ * @param {number} options.maxCellsPerSheet - シートあたりの最大セル数（デフォルト: 100000）
+ * @param {boolean} options.includeEmptyCells - 空セルを含めるか（デフォルト: false）
+ * @returns {string} 作成されたファイルのURL
+ */
+function exportToFile(options = {}) {
+  try {
+    Logger.log('==============================================');
+    Logger.log('📁 スプレッドシート全体をGoogle Driveに保存します');
+    Logger.log('==============================================\n');
+
+    // スプレッドシート名を取得してファイル名を自動生成
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const defaultFilename = `${spreadsheet.getName()}_完全出力_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss')}.json`;
+    const filename = options.filename || defaultFilename;
+
+    // データ取得オプションを設定
+    const dataOptions = {
+      maxCellsPerSheet: options.maxCellsPerSheet,
+      includeEmptyCells: options.includeEmptyCells
+    };
+
+    // 完全なデータを取得
+    const data = getUltraCompleteData(dataOptions);
+
+    // Google Driveに保存
+    const fileUrl = saveToGoogleDrive(data, filename);
+
+    Logger.log('\n==============================================');
+    Logger.log('✅ 処理が完了しました！');
+    Logger.log('==============================================');
+    Logger.log('📌 次のステップ:');
+    Logger.log('   1. 上記のファイルURLをクリック');
+    Logger.log('   2. Google DriveでJSONファイルを開く');
+    Logger.log('   3. ダウンロードまたは内容を確認');
+    Logger.log('==============================================\n');
+
+    return fileUrl;
+
+  } catch (error) {
+    Logger.log('\n❌ エラーが発生しました');
+    Logger.log(`エラーメッセージ: ${error.message}`);
+    Logger.log(`スタックトレース: ${error.stack}`);
+    throw error;
+  }
+}
+
+/**
+ * カスタム設定でGoogle Driveに保存する関数
+ * より細かい設定が必要な場合に使用
+ *
+ * @param {string} filename - ファイル名
+ * @param {Object} options - オプション設定
+ * @returns {string} 作成されたファイルのURL
+ */
+function exportToFileWithOptions(filename, options = {}) {
+  return exportToFile({
+    filename: filename,
+    maxCellsPerSheet: options.maxCellsPerSheet,
+    includeEmptyCells: options.includeEmptyCells
+  });
+}
+
+/**
  * 簡易版: 基本情報のみを出力する関数
  * テスト用または概要確認用
  *
@@ -395,22 +473,49 @@ function getBasicSpreadsheetInfo() {
 }
 
 /**
+ * ============================================================
  * 使用例とテストコード
+ * ============================================================
  *
- * 実行方法：
- * 1. 基本実行（デフォルト設定）
+ * 【最も簡単な方法】推奨！
+ * ----------------------------------------
+ * 1. Google Driveに自動保存（1クリック）
+ *    exportToFile();
+ *    → ファイル名が自動生成され、Google Driveに保存されます
+ *    → 実行ログにURLが表示されるのでクリックして確認
+ *
+ * 2. ファイル名を指定して保存
+ *    exportToFile({ filename: 'my_export.json' });
+ *
+ * 3. 空セルも含めて保存
+ *    exportToFile({ includeEmptyCells: true });
+ *
+ * 4. セル数制限を変更して保存
+ *    exportToFile({ maxCellsPerSheet: 200000 });
+ *
+ * 【上級者向け】
+ * ----------------------------------------
+ * 5. Logger.logで確認（小規模データのみ）
  *    getUltraCompleteData();
  *
- * 2. 空セルを含めて出力
+ * 6. 空セルを含めて実行ログに出力
  *    getUltraCompleteData({ includeEmptyCells: true });
  *
- * 3. セル数制限を変更
+ * 7. セル数制限を変更
  *    getUltraCompleteData({ maxCellsPerSheet: 50000 });
  *
- * 4. Google Driveに保存
+ * 8. 手動でGoogle Driveに保存
  *    const data = getUltraCompleteData();
  *    saveToGoogleDrive(data, 'my_spreadsheet_export.json');
  *
- * 5. 基本情報のみ取得（テスト用）
+ * 9. 基本情報のみ取得（テスト用）
  *    getBasicSpreadsheetInfo();
+ *
+ * 10. カスタム設定で保存
+ *    exportToFileWithOptions('custom_export.json', {
+ *      maxCellsPerSheet: 150000,
+ *      includeEmptyCells: true
+ *    });
+ *
+ * ============================================================
  */
