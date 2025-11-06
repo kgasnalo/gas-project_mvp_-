@@ -17,7 +17,9 @@ const CONFIG = {
     SURVEY_RESPONSE: 'Survey_Response',
     ACCEPTANCE_STORY: 'Acceptance_Story',
     COMPETITOR_COMPARISON: 'Competitor_Comparison',
-    ARCHIVE: 'Archive'
+    ARCHIVE: 'Archive',
+    SURVEY_SEND_LOG: 'Survey_Send_Log', // 新規追加
+    ANKETO_URL: 'アンケートURL' // 新規追加
   },
   
   // 色の定義
@@ -42,7 +44,9 @@ const CONFIG = {
     RISK_LEVEL: ['Critical', 'High', 'Medium', 'Low', 'None'],
     RECOMMENDATION: ['Pass', 'Conditional', 'Fail'],
     CONTACT_TYPE: ['メール', '電話', '面談', '面接', 'アンケート'],
-    ACTION_STATUS: ['未実行', '実行中', '完了']
+    ACTION_STATUS: ['未実行', '実行中', '完了'],
+    SURVEY_PHASE: ['初回面談', '社員面談', '2次面接', '内定後'], // 新規追加
+    SEND_STATUS: ['成功', '失敗'] // 新規追加
   },
   
   // 列幅の設定（ピクセル）
@@ -55,7 +59,96 @@ const CONFIG = {
     PERCENTAGE: 100,
     TEXT_SHORT: 150,
     TEXT_LONG: 250,
-    URL: 200
+    URL: 200,
+    EMAIL: 200 // 新規追加
+  },
+
+  // ========== 【新規追加】列番号定数 ==========
+  COLUMNS: {
+    CANDIDATES_MASTER: {
+      CANDIDATE_ID: 0,        // A列
+      NAME: 1,                // B列
+      STATUS: 2,              // C列
+      LAST_UPDATE: 3,         // D列
+      CATEGORY: 4,            // E列
+      INTERVIEWER: 5,         // F列
+      APPLICATION_DATE: 6,    // G列
+      LATEST_PASS_PROB: 7,    // H列
+      PREV_PASS_PROB: 8,      // I列
+      PASS_PROB_CHANGE: 9,    // J列
+      LATEST_TOTAL_SCORE: 10, // K列
+      LATEST_PHILOSOPHY: 11,  // L列
+      LATEST_STRATEGY: 12,    // M列
+      LATEST_MOTIVATION: 13,  // N列
+      LATEST_EXECUTION: 14,   // O列
+      LATEST_ACCEPTANCE_AI: 15,     // P列
+      LATEST_ACCEPTANCE_HUMAN: 16,  // Q列
+      LATEST_ACCEPTANCE_INTEGRATED: 17, // R列
+      PREV_ACCEPTANCE: 18,    // S列
+      ACCEPTANCE_CHANGE: 19,  // T列
+      CONFIDENCE: 20,         // U列
+      ASPIRATION_SCORE: 21,   // V列
+      COMPETITIVE_ADVANTAGE: 22, // W列
+      CONCERN_RESOLUTION: 23, // X列
+      CORE_MOTIVATION: 24,    // Y列
+      MAIN_CONCERNS: 25,      // Z列
+      COMPETITOR1: 26,        // AA列
+      COMPETITOR2: 27,        // AB列
+      COMPETITOR3: 28,        // AC列
+      OUR_RANKING: 29,        // AD列
+      LAST_CONTACT_DATE: 30,  // AE列
+      DAYS_SINCE_CONTACT: 31, // AF列
+      CONTACT_COUNT: 32,      // AG列
+      AVG_CONTACT_INTERVAL: 33, // AH列
+      NEXT_CONTACT_DATE: 34,  // AI列
+      NEXT_ACTION: 35,        // AJ列
+      ACTION_DEADLINE: 36,    // AK列
+      ACTION_URGENCY: 37,     // AL列
+      ACTION_STATUS: 38,      // AM列
+      ACTION_OWNER: 39,       // AN列
+      PRIORITY_SCORE: 40,     // AO列
+      URGENCY_COEFFICIENT: 41, // AP列
+      EMAIL: 42               // AQ列（新規）
+    },
+    EVALUATION_LOG: {
+      LOG_ID: 0,              // A列
+      CANDIDATE_ID: 1,        // B列
+      NAME: 2,                // C列
+      EVAL_DATE: 3,           // D列
+      PHASE: 4,               // E列
+      INTERVIEWER: 5,         // F列
+      OVERALL_SCORE: 6,       // G列
+      PHILOSOPHY_SCORE: 7,    // H列
+      PHILOSOPHY_REASON: 8,   // I列
+      STRATEGY_SCORE: 9,      // J列
+      STRATEGY_REASON: 10,    // K列
+      MOTIVATION_SCORE: 11,   // L列
+      MOTIVATION_REASON: 12,  // M列
+      EXECUTION_SCORE: 13,    // N列
+      EXECUTION_REASON: 14,   // O列
+      HIGHEST_RISK_LEVEL: 15, // P列
+      PASS_PROBABILITY: 16,   // Q列
+      RECOMMENDATION: 17,     // R列
+      DOC_URL: 18,            // S列
+      PROACTIVITY_SCORE: 19   // T列（新規）
+    },
+    SURVEY_SEND_LOG: {
+      SEND_ID: 0,             // A列
+      CANDIDATE_ID: 1,        // B列
+      NAME: 2,                // C列
+      EMAIL: 3,               // D列
+      PHASE: 4,               // E列
+      SEND_TIME: 5,           // F列
+      STATUS: 6,              // G列
+      ERROR_MSG: 7            // H列
+    }
+  },
+
+  // Gmail送信制限
+  EMAIL: {
+    DAILY_LIMIT: 90,          // 安全のため90通まで（実際は100通/日）
+    RETRY_COUNT: 3,           // リトライ回数
+    RETRY_DELAY: 2000         // リトライ間隔（ミリ秒）
   },
 
   // Dify API設定

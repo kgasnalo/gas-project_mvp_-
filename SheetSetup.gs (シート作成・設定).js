@@ -25,31 +25,34 @@ function setupCandidatesMaster() {
   try {
     const sheet = getOrCreateSheet(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
     
-    // ヘッダー行の定義
+    // ヘッダー行の定義（AQ列まで）
     const headers = [
       // 基本情報 A-G列
       'candidate_id', '氏名', '現在ステータス', '最終更新日時', '採用区分', '担当面接官', '応募日',
-      
+
       // 合格可能性 H-O列
       '最新_合格可能性', '前回_合格可能性', '合格可能性_増減', '最新_合計スコア',
       '最新_Philosophy', '最新_Strategy', '最新_Motivation', '最新_Execution',
-      
+
       // 承諾可能性 P-Z列
       '最新_承諾可能性（AI予測）', '最新_承諾可能性（人間の直感）', '最新_承諾可能性（統合）',
       '前回_承諾可能性', '承諾可能性_増減', '予測の信頼度', '志望度スコア', '競合優位性スコア',
       '懸念解消度スコア', 'コアモチベーション', '主要懸念事項',
-      
+
       // 競合情報 AA-AD列
       '競合企業1', '競合企業2', '競合企業3', '自社の志望順位',
-      
+
       // 接点管理 AE-AI列
       '前回接点日', '前回接点からの空白期間', '接点回数', '平均接点間隔', '次回接点予定日',
-      
+
       // アクション管理 AJ-AN列
       '次推奨アクション', 'アクション期限', 'アクション緊急度', 'アクション実行状況', 'アクション実行者',
-      
+
       // 注力度合い AO-AP列
-      '注力度合いスコア', '緊急度係数'
+      '注力度合いスコア', '緊急度係数',
+
+      // 【新規追加】AQ列
+      'メールアドレス' // AQ列（43列目）
     ];
     
     setHeaders(sheet, headers);
@@ -97,7 +100,8 @@ function setupCandidatesMaster() {
       39: 150,  // AM: アクション実行状況
       40: 140,  // AN: アクション実行者
       41: 140,  // AO: 注力度合いスコア
-      42: 120   // AP: 緊急度係数
+      42: 120,  // AP: 緊急度係数
+      43: 200   // AQ: メールアドレス（新規）
     };
     
     // 列幅を設定
@@ -130,30 +134,31 @@ function setupCandidatesMaster() {
     sheet.getRange('AL2:AL1000').clearDataValidations();
 
     // ========== 自動計算列の関数設定 ==========
+    // ⚠️ Evaluation_Logの範囲をA:S（T列追加に対応）に修正
 
     // H列: 最新_合格可能性
-    sheet.getRange('H2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT Q WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+    sheet.getRange('H2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:S, "SELECT Q WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
 
     // I列: 前回_合格可能性
-    sheet.getRange('I2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT Q WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1 OFFSET 1", 0), 0)');
+    sheet.getRange('I2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:S, "SELECT Q WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1 OFFSET 1", 0), 0)');
 
     // J列: 合格可能性_増減
     sheet.getRange('J2').setFormula('=IF(OR(H2="", I2=""), "", H2-I2)');
 
     // K列: 最新_合計スコア
-    sheet.getRange('K2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT G WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+    sheet.getRange('K2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:S, "SELECT G WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
 
     // L列: 最新_Philosophy
-    sheet.getRange('L2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT H WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+    sheet.getRange('L2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:S, "SELECT H WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
 
     // M列: 最新_Strategy
-    sheet.getRange('M2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT J WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+    sheet.getRange('M2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:S, "SELECT J WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
 
     // N列: 最新_Motivation
-    sheet.getRange('N2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT L WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+    sheet.getRange('N2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:S, "SELECT L WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
 
     // O列: 最新_Execution
-    sheet.getRange('O2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:R, "SELECT N WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
+    sheet.getRange('O2').setFormula('=IFERROR(QUERY(Evaluation_Log!A:S, "SELECT N WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
 
     // P列: 最新_承諾可能性（AI予測）
     sheet.getRange('P2').setFormula('=IFERROR(QUERY(Engagement_Log!A:U, "SELECT G WHERE B=\'"&A2&"\' ORDER BY D DESC LIMIT 1", 0), 0)');
@@ -240,12 +245,14 @@ function setupEvaluationLog() {
   try {
     const sheet = getOrCreateSheet(CONFIG.SHEET_NAMES.EVALUATION_LOG);
     
+    // ヘッダー行の定義（T列まで追加）
     const headers = [
       'log_id', 'candidate_id', '氏名', 'evaluation_date', '選考フェーズ', '面接官',
       'overall_score', 'philosophy_score', 'philosophy_reason',
       'strategy_score', 'strategy_reason', 'motivation_score', 'motivation_reason',
       'execution_score', 'execution_reason', 'highest_risk_level',
-      'pass_probability', 'recommendation', 'doc_url'
+      'pass_probability', 'recommendation', 'doc_url',
+      'proactivity_score' // 【新規追加】T列（20列目）
     ];
     
     setHeaders(sheet, headers);
@@ -270,7 +277,8 @@ function setupEvaluationLog() {
       16: 150,  // highest_risk_level
       17: 140,  // pass_probability
       18: 140,  // recommendation
-      19: 250   // doc_url
+      19: 250,  // doc_url
+      20: 130   // proactivity_score（新規）
     };
     
     for (let col in columnWidths) {
@@ -285,6 +293,7 @@ function setupEvaluationLog() {
     sheet.getRange('L2:L1000').setNumberFormat('0.00');
     sheet.getRange('N2:N1000').setNumberFormat('0.00');
     sheet.getRange('Q2:Q1000').setNumberFormat('0.00"%"');
+    sheet.getRange('T2:T1000').setNumberFormat('0'); // proactivity_score（0-100点）
     
     // テキストの折り返し
     sheet.getRange('I2:I1000').setWrap(true);
@@ -492,10 +501,13 @@ function setupOtherSheets() {
     
     // Archive
     setupArchiveSheet();
-    
+
+    // Survey_Send_Log（新規追加）
+    setupSurveySendLog();
+
     // README（システム説明）
     setupReadmeSheet();
-    
+
     Logger.log('✅ その他のシートのセットアップが完了しました');
     
   } catch (error) {
@@ -1166,7 +1178,86 @@ function setupDashboardComplete() {
   );
   
   sheet.setConditionalFormatRules(rules);
-  
+
   Logger.log('✅ Dashboard（完全版）を作成しました');
+}
+
+/**
+ * Survey_Send_Logシートを作成
+ */
+function setupSurveySendLog() {
+  try {
+    const sheet = getOrCreateSheet(CONFIG.SHEET_NAMES.SURVEY_SEND_LOG);
+
+    // ヘッダー行の定義
+    const headers = [
+      'send_id',
+      'candidate_id',
+      'candidate_name',
+      'email',
+      'phase',
+      'send_time',
+      'send_status',
+      'error_message'
+    ];
+
+    setHeaders(sheet, headers);
+
+    // 列幅を調整
+    sheet.setColumnWidth(1, 150);  // send_id
+    sheet.setColumnWidth(2, 150);  // candidate_id
+    sheet.setColumnWidth(3, 120);  // candidate_name
+    sheet.setColumnWidth(4, 200);  // email
+    sheet.setColumnWidth(5, 100);  // phase
+    sheet.setColumnWidth(6, 160);  // send_time
+    sheet.setColumnWidth(7, 100);  // send_status
+    sheet.setColumnWidth(8, 250);  // error_message
+
+    // フォーマット設定
+    sheet.getRange('F2:F1000').setNumberFormat('yyyy-mm-dd hh:mm:ss'); // send_time
+
+    // データ検証（phase列）
+    setDropdownValidation(
+      sheet,
+      'E2:E1000',
+      CONFIG.VALIDATION_OPTIONS.SURVEY_PHASE,
+      'アンケート種別を選択してください'
+    );
+
+    // データ検証（send_status列）
+    setDropdownValidation(
+      sheet,
+      'G2:G1000',
+      CONFIG.VALIDATION_OPTIONS.SEND_STATUS,
+      '送信ステータスを選択してください'
+    );
+
+    // 条件付き書式（send_status列）
+    const rules = [];
+
+    rules.push(
+      SpreadsheetApp.newConditionalFormatRule()
+        .whenTextEqualTo('成功')
+        .setBackground(CONFIG.COLORS.HIGH_SCORE)
+        .setRanges([sheet.getRange('G2:G1000')])
+        .build()
+    );
+
+    rules.push(
+      SpreadsheetApp.newConditionalFormatRule()
+        .whenTextEqualTo('失敗')
+        .setBackground(CONFIG.COLORS.LOW_SCORE)
+        .setRanges([sheet.getRange('G2:G1000')])
+        .build()
+    );
+
+    sheet.setConditionalFormatRules(rules);
+
+    Logger.log('✅ Survey_Send_Logシート作成完了');
+
+  } catch (error) {
+    logError('setupSurveySendLog', error);
+    throw error;
+  }
 }
 
