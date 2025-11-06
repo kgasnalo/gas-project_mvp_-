@@ -63,6 +63,14 @@ const CONFIG = {
     EMAIL: 200 // 新規追加
   },
 
+  // アンケートフォームのURL
+  SURVEY_URLS: {
+    '初回面談': 'https://docs.google.com/forms/d/e/1FAIpQLSenk59dq_baS1ezizK43FgHkrGopRxw4hmQV9fhT-MNLnyAOw/viewform',
+    '社員面談': 'https://docs.google.com/forms/d/e/1FAIpQLSc3kTG6eQVS5Ul6K0xIXlYQQ70T8H-P1ZmBjNDJd-IyKlYNCw/viewform',
+    '2次面接': 'https://docs.google.com/forms/d/e/1FAIpQLSeXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/viewform', // 要設定: 実際のURLに置き換え
+    '内定後': 'https://docs.google.com/forms/d/e/1FAIpQLSdXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/viewform' // 要設定: 実際のURLに置き換え
+  },
+
   // ========== 【新規追加】列番号定数 ==========
   COLUMNS: {
     CANDIDATES_MASTER: {
