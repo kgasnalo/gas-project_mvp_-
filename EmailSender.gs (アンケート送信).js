@@ -394,3 +394,47 @@ function recordSendLog(data) {
 
   Logger.log(`📝 送信ログを記録しました: ${data.candidateName} (${data.sendStatus})`);
 }
+
+// ========================================
+// テスト関数
+// ========================================
+
+/**
+ * テスト1: 基本的な送信テスト
+ *
+ * 実行方法:
+ * 1. Candidates_MasterのAQ列にテスト用メールアドレスを入力
+ * 2. GASエディターでこの関数を選択
+ * 3. 実行ボタン（▶️）をクリック
+ */
+function testEmailSend() {
+  // Candidates_Masterに存在する候補者IDを指定
+  // AQ列にメールアドレスが入力されている必要があります
+  sendSurveyEmailSafe('C001', '初回面談');
+}
+
+/**
+ * テスト2: 送信数カウントのテスト
+ *
+ * 実行方法:
+ * 1. GASエディターでこの関数を選択
+ * 2. 実行ボタン（▶️）をクリック
+ * 3. 「表示」→「ログ」で送信数を確認
+ */
+function testSendCount() {
+  const count = getTodaySendCount();
+  Logger.log(`本日の送信数: ${count}/${CONFIG.EMAIL.DAILY_LIMIT}`);
+}
+
+/**
+ * テスト3: エラーケースのテスト
+ *
+ * 実行方法:
+ * 1. GASエディターでこの関数を選択
+ * 2. 実行ボタン（▶️）をクリック
+ * 3. エラーダイアログが表示されることを確認
+ */
+function testEmailSendError() {
+  // 存在しない候補者IDでテスト
+  sendSurveyEmailSafe('C999', '初回面談');
+}
