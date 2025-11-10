@@ -23,6 +23,8 @@
  * sendSurveyEmailSafe('C001', '初回面談');
  */
 function sendSurveyEmailSafe(candidateId, phase) {
+  let candidate = null; // catchブロックでも参照できるように外で定義
+
   try {
     // 【ステップ1】送信前に制限チェック
     const todayCount = getTodaySendCount();
@@ -35,7 +37,7 @@ function sendSurveyEmailSafe(candidateId, phase) {
     }
 
     // 【ステップ2】候補者情報を取得
-    const candidate = getCandidateInfo(candidateId);
+    candidate = getCandidateInfo(candidateId);
 
     if (!candidate.email) {
       throw new Error('メールアドレスが登録されていません（AQ列を確認してください）');
@@ -68,13 +70,18 @@ function sendSurveyEmailSafe(candidateId, phase) {
 
     Logger.log(`✅ アンケート送信成功: ${candidate.name} (${phase})`);
 
-    // 成功メッセージを表示
-    SpreadsheetApp.getUi().alert(
-      'アンケート送信完了',
-      `${candidate.name}様に${phase}アンケートを送信しました。\n\n` +
-      `本日の送信数: ${todayCount + 1}/${CONFIG.EMAIL.DAILY_LIMIT}`,
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
+    // 成功メッセージを表示（UIが使える場合のみ）
+    try {
+      SpreadsheetApp.getUi().alert(
+        'アンケート送信完了',
+        `${candidate.name}様に${phase}アンケートを送信しました。\n\n` +
+        `本日の送信数: ${todayCount + 1}/${CONFIG.EMAIL.DAILY_LIMIT}`,
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    } catch (uiError) {
+      // UIが使えないコンテキスト（エディタから直接実行など）の場合はログのみ
+      Logger.log(`📧 送信完了メッセージ: ${candidate.name}様に${phase}アンケートを送信しました。本日の送信数: ${todayCount + 1}/${CONFIG.EMAIL.DAILY_LIMIT}`);
+    }
 
     return true;
 
@@ -92,13 +99,18 @@ function sendSurveyEmailSafe(candidateId, phase) {
       errorMessage: error.toString()
     });
 
-    // エラーメッセージを表示
-    SpreadsheetApp.getUi().alert(
-      'アンケート送信エラー',
-      `送信に失敗しました。\n\n${error.message}\n\n` +
-      'Survey_Send_Logシートでエラー詳細を確認できます。',
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
+    // エラーメッセージを表示（UIが使える場合のみ）
+    try {
+      SpreadsheetApp.getUi().alert(
+        'アンケート送信エラー',
+        `送信に失敗しました。\n\n${error.message}\n\n` +
+        'Survey_Send_Logシートでエラー詳細を確認できます。',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    } catch (uiError) {
+      // UIが使えないコンテキストの場合はログのみ
+      Logger.log(`❌ エラーメッセージ: 送信に失敗しました。${error.message}`);
+    }
 
     return false;
   }
