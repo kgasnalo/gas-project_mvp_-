@@ -164,6 +164,19 @@ const CONFIG = {
       SEND_TIME: 5,           // F列
       STATUS: 6,              // G列
       ERROR_MSG: 7            // H列
+    },
+
+    // ========== 【新規追加】SURVEY_RESPONSE ==========
+    SURVEY_RESPONSE: {
+      RESPONSE_ID: 0,        // A列
+      CANDIDATE_ID: 1,       // B列
+      NAME: 2,               // C列
+      RESPONSE_DATE: 3,      // D列
+      ASPIRATION: 4,         // E列: 志望度
+      CONCERNS: 5,           // F列: 懸念事項
+      OTHER_COMPANIES: 6,    // G列: 他社選考状況
+      COMMENTS: 7,           // H列: その他コメント
+      PHASE: 8               // I列: アンケート種別（新規追加）
     }
   },
 

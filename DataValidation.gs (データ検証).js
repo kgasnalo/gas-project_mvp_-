@@ -4,14 +4,15 @@
 function setupAllDataValidation() {
   try {
     Logger.log('データ検証の設定を開始します...');
-    
+
     setupCandidatesMasterValidation();
     setupEvaluationLogValidation();
     setupEngagementLogValidation();
+    setupSurveyResponseValidation(); // 【新規追加】
     setupOtherSheetsValidation();
-    
+
     Logger.log('✅ 全データ検証の設定が完了しました');
-    
+
   } catch (error) {
     logError('setupAllDataValidation', error);
     throw error;
@@ -218,4 +219,35 @@ function setupOtherSheetsValidation() {
   }
   
   Logger.log('✅ その他のシートのデータ検証を設定しました');
+}
+
+/**
+ * Survey_Responseシートのデータ検証を設定
+ */
+function setupSurveyResponseValidation() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName(CONFIG.SHEET_NAMES.SURVEY_RESPONSE);
+
+  if (!sheet) {
+    Logger.log('⚠️ Survey_Responseシートが見つかりません');
+    return;
+  }
+
+  // I列: アンケート種別
+  setDropdownValidation(
+    sheet,
+    'I2:I1000',
+    ['初回面談', '社員面談', '2次面接', '内定後'],
+    'アンケート種別を選択してください'
+  );
+
+  // E列: 志望度（1-10の整数）
+  const aspirationRule = SpreadsheetApp.newDataValidation()
+    .requireNumberBetween(1, 10)
+    .setAllowInvalid(false)
+    .setHelpText('1から10の整数を入力してください')
+    .build();
+  sheet.getRange('E2:E1000').setDataValidation(aspirationRule);
+
+  Logger.log('✅ Survey_Responseのデータ検証を設定しました');
 }
