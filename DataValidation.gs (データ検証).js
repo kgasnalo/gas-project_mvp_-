@@ -53,7 +53,65 @@ function setupCandidatesMasterValidation() {
     CONFIG.VALIDATION_OPTIONS.ACTION_STATUS,
     '実行状況を選択してください'
   );
-  
+
+  // 【新規追加】選考ステップ追跡列のデータ検証
+  // AS列: 初回面談実施ステータス
+  setDropdownValidation(
+    sheet,
+    'AS2:AS1000',
+    CONFIG.VALIDATION_OPTIONS.IMPLEMENTATION_STATUS,
+    '実施ステータスを選択してください'
+  );
+
+  // AU列: 適性検査実施ステータス
+  setDropdownValidation(
+    sheet,
+    'AU2:AU1000',
+    CONFIG.VALIDATION_OPTIONS.IMPLEMENTATION_STATUS,
+    '実施ステータスを選択してください'
+  );
+
+  // AW列: 1次面接結果
+  setDropdownValidation(
+    sheet,
+    'AW2:AW1000',
+    CONFIG.VALIDATION_OPTIONS.TEST_RESULT,
+    '面接結果を選択してください'
+  );
+
+  // AX列: 社員面談実施回数（チェックボックス形式ではなく数値入力）
+  // 数値のみ許可（0以上の整数）
+  const axRule = SpreadsheetApp.newDataValidation()
+    .requireNumberGreaterThanOrEqualTo(0)
+    .setAllowInvalid(false)
+    .setHelpText('0以上の整数を入力してください')
+    .build();
+  sheet.getRange('AX2:AX1000').setDataValidation(axRule);
+
+  // AZ列: 社員面談実施ステータス
+  setDropdownValidation(
+    sheet,
+    'AZ2:AZ1000',
+    CONFIG.VALIDATION_OPTIONS.IMPLEMENTATION_STATUS,
+    '実施ステータスを選択してください'
+  );
+
+  // BB列: 2次面接実施ステータス
+  setDropdownValidation(
+    sheet,
+    'BB2:BB1000',
+    CONFIG.VALIDATION_OPTIONS.IMPLEMENTATION_STATUS,
+    '実施ステータスを選択してください'
+  );
+
+  // BD列: 最終面接実施ステータス
+  setDropdownValidation(
+    sheet,
+    'BD2:BD1000',
+    CONFIG.VALIDATION_OPTIONS.IMPLEMENTATION_STATUS,
+    '実施ステータスを選択してください'
+  );
+
   Logger.log('✅ Candidates_Masterのデータ検証を設定しました');
 }
 
@@ -66,11 +124,11 @@ function setupEvaluationLogValidation() {
   
   if (!sheet) return;
   
-  // E列: 選考フェーズ
+  // E列: 選考フェーズ（6項目に拡張）
   setDropdownValidation(
     sheet,
     'E2:E1000',
-    ['面談', '1次面接', '2次面接', '最終面接'],
+    ['初回面談', '社員面談', '1次面接', '2次面接', '最終面接', '内定後'],
     '選考フェーズを選択してください'
   );
   
