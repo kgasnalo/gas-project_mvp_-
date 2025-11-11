@@ -87,21 +87,10 @@ function getColumnLetter(columnNumber) {
 
 /**
  * Candidates_Masterシートの既存データをクリア（ヘッダー以外）
+ * ⚠️ 確認なしで削除します。実行前にバックアップを取ることを推奨
  */
 function clearCandidatesMasterData() {
   try {
-    const ui = SpreadsheetApp.getUi();
-    const response = ui.alert(
-      '確認',
-      'Candidates_Masterシートの全データ（ヘッダー以外）を削除しますか？',
-      ui.ButtonSet.YES_NO
-    );
-
-    if (response !== ui.Button.YES) {
-      Logger.log('⚠️ キャンセルされました');
-      return;
-    }
-
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
 
@@ -120,6 +109,31 @@ function clearCandidatesMasterData() {
 
   } catch (error) {
     logError('clearCandidatesMasterData', error);
+  }
+}
+
+/**
+ * Candidates_Masterシートの既存データをクリア（UI付き・スプレッドシートから実行用）
+ */
+function clearCandidatesMasterDataWithConfirm() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    const response = ui.alert(
+      '確認',
+      'Candidates_Masterシートの全データ（ヘッダー以外）を削除しますか？',
+      ui.ButtonSet.YES_NO
+    );
+
+    if (response !== ui.Button.YES) {
+      ui.alert('キャンセルされました');
+      return;
+    }
+
+    clearCandidatesMasterData();
+    ui.alert('完了', 'データを削除しました', ui.ButtonSet.OK);
+
+  } catch (error) {
+    logError('clearCandidatesMasterDataWithConfirm', error);
   }
 }
 
