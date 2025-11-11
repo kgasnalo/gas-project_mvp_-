@@ -96,20 +96,20 @@ function setupCandidatesMasterValidation() {
     '実施ステータスを選択してください'
   );
 
-  // BB列: 2次面接実施ステータス
+  // BB列: 2次面接結果
   setDropdownValidation(
     sheet,
     'BB2:BB1000',
-    CONFIG.VALIDATION_OPTIONS.IMPLEMENTATION_STATUS,
-    '実施ステータスを選択してください'
+    CONFIG.VALIDATION_OPTIONS.TEST_RESULT,
+    '面接結果を選択してください'
   );
 
-  // BD列: 最終面接実施ステータス
+  // BD列: 最終面接結果
   setDropdownValidation(
     sheet,
     'BD2:BD1000',
-    CONFIG.VALIDATION_OPTIONS.IMPLEMENTATION_STATUS,
-    '実施ステータスを選択してください'
+    CONFIG.VALIDATION_OPTIONS.TEST_RESULT,
+    '面接結果を選択してください'
   );
 
   Logger.log('✅ Candidates_Masterのデータ検証を設定しました');

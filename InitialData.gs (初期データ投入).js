@@ -301,7 +301,7 @@ function insertSampleCandidateData() {
       2.16, 3.0, 'tanaka@example.com',
       addDays(today, -60), '実施済', addDays(today, -55), '実施済',
       addDays(today, -50), '合格', 2, addDays(today, -45), '実施済',
-      addDays(today, -35), '実施済', addDays(today, -25), '実施済'
+      addDays(today, -35), '合格', addDays(today, -25), '合格'
     ],
     
     // 候補者2: 佐藤花子（2次面接、承諾可能性中、HIGH）
@@ -315,7 +315,7 @@ function insertSampleCandidateData() {
       1.28, 2.0, 'sato@example.com',
       addDays(today, -40), '実施済', addDays(today, -38), '実施済',
       addDays(today, -35), '合格', 1, addDays(today, -30), '実施済',
-      addDays(today, -20), '実施済', '', '未実施'
+      addDays(today, -20), '合格', '', '未実施'
     ],
     
     // 候補者3: 鈴木一郎（最終面接、承諾可能性非常に高、NORMAL）
@@ -329,7 +329,7 @@ function insertSampleCandidateData() {
       2.61, 3.0, 'suzuki@example.com',
       addDays(today, -65), '実施済', addDays(today, -62), '実施済',
       addDays(today, -58), '合格', 3, addDays(today, -50), '実施済',
-      addDays(today, -40), '実施済', addDays(today, -28), '実施済'
+      addDays(today, -40), '合格', addDays(today, -28), '合格'
     ],
     
     // 候補者4: 高橋美咲（1次面接、承諾可能性低、HIGH）
@@ -371,7 +371,7 @@ function insertSampleCandidateData() {
       1.92, 3.0, 'yamamoto@example.com',
       addDays(today, -55), '実施済', addDays(today, -52), '実施済',
       addDays(today, -48), '合格', 1, addDays(today, -42), '実施済',
-      addDays(today, -32), '実施済', addDays(today, -22), '実施済'
+      addDays(today, -32), '合格', addDays(today, -22), '合格'
     ],
 
     // 候補者7: 中村大輔（2次面接、承諾可能性中、NORMAL）
@@ -385,7 +385,7 @@ function insertSampleCandidateData() {
       0.86, 2.0, 'nakamura@example.com',
       addDays(today, -45), '実施済', addDays(today, -42), '実施済',
       addDays(today, -38), '合格', 2, addDays(today, -33), '実施済',
-      addDays(today, -24), '実施済', '', '未実施'
+      addDays(today, -24), '合格', '', '未実施'
     ],
 
     // 候補者8: 小林愛（1次面接、承諾可能性低、LOW）
@@ -427,7 +427,7 @@ function insertSampleCandidateData() {
       0.90, 2.0, 'ito@example.com',
       addDays(today, -38), '実施済', addDays(today, -36), '実施済',
       addDays(today, -32), '合格', 1, addDays(today, -28), '実施済',
-      addDays(today, -21), '実施済', '', '未実施'
+      addDays(today, -21), '合格', '', '未実施'
     ]
   ];
   
