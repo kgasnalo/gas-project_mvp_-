@@ -298,7 +298,10 @@ function insertSampleCandidateData() {
       'A社（大手コンサル）', 'B社（メガベンチャー）', '', '第二志望',
       addDays(today, -1), 1, 5, 3, today,
       '代表との1on1面談を設定し、成長環境の魅力を訴求', today, 'CRITICAL', '未実行', '山田部長',
-      2.16, 3.0
+      2.16, 3.0, 'tanaka@example.com',
+      addDays(today, -60), '実施済', addDays(today, -55), '実施済',
+      addDays(today, -50), '合格', 2, addDays(today, -45), '実施済',
+      addDays(today, -35), '実施済', addDays(today, -25), '実施済'
     ],
     
     // 候補者2: 佐藤花子（2次面接、承諾可能性中、HIGH）
@@ -309,7 +312,10 @@ function insertSampleCandidateData() {
       'C社（外資系IT）', '', '', '第三志望',
       addDays(today, -7), 7, 3, 5, addDays(today, 1),
       '給与テーブルと福利厚生の詳細を提示。人事との面談を設定', addDays(today, 1), 'HIGH', '未実行', '鈴木課長',
-      1.28, 2.0
+      1.28, 2.0, 'sato@example.com',
+      addDays(today, -40), '実施済', addDays(today, -38), '実施済',
+      addDays(today, -35), '合格', 1, addDays(today, -30), '実施済',
+      addDays(today, -20), '実施済', '', '未実施'
     ],
     
     // 候補者3: 鈴木一郎（最終面接、承諾可能性非常に高、NORMAL）
@@ -320,7 +326,10 @@ function insertSampleCandidateData() {
       'B社（メガベンチャー）', '', '', '第一志望',
       addDays(today, -5), 5, 6, 3, addDays(today, 2),
       'フォローメールを送信し、入社意思を確認', addDays(today, 2), 'NORMAL', '未実行', '山田部長',
-      2.61, 3.0
+      2.61, 3.0, 'suzuki@example.com',
+      addDays(today, -65), '実施済', addDays(today, -62), '実施済',
+      addDays(today, -58), '合格', 3, addDays(today, -50), '実施済',
+      addDays(today, -40), '実施済', addDays(today, -28), '実施済'
     ],
     
     // 候補者4: 高橋美咲（1次面接、承諾可能性低、HIGH）
@@ -331,18 +340,24 @@ function insertSampleCandidateData() {
       'A社（大手コンサル）', 'C社（外資系IT）', '', '第四志望',
       addDays(today, -3), 3, 2, 4, addDays(today, 1),
       '事業計画と成長戦略を説明。CFOとの面談を設定', addDays(today, 1), 'HIGH', '未実行', '伊藤主任',
-      0.88, 1.5
+      0.88, 1.5, 'takahashi@example.com',
+      addDays(today, -25), '実施済', addDays(today, -22), '実施済',
+      addDays(today, -18), '合格', 0, '', '未実施',
+      '', '未実施', '', '未実施'
     ],
-    
-    // 候補者5: 渡辺健太（面談、承諾可能性中、NORMAL）
+
+    // 候補者5: 渡辺健太（初回面談、承諾可能性中、NORMAL）
     [
-      'C005', '渡辺健太', '面談', addDays(now, -5), '中途', '鈴木課長', addDays(today, -5),
+      'C005', '渡辺健太', '初回面談', addDays(now, -5), '中途', '鈴木課長', addDays(today, -5),
       65, 60, 5, 0.65, 0.70, 0.65, 0.60, 0.65,
       60, 55, 58, 55, 3, '中', 70, 55, 65, 'キャリアアップ', '転職理由が不明確',
       'B社（メガベンチャー）', '', '', '第二志望',
       addDays(today, -2), 2, 2, 2, addDays(today, 3),
       '1次面接を実施。キャリアビジョンを深掘り', addDays(today, 3), 'NORMAL', '未実行', '鈴木課長',
-      0.62, 1.0
+      0.62, 1.0, 'watanabe@example.com',
+      addDays(today, -12), '実施済', '', '未実施',
+      '', '未実施', 0, '', '未実施',
+      '', '未実施', '', '未実施'
     ],
     
     // 候補者6: 山本さくら（最終面接、承諾可能性高、CRITICAL）
@@ -353,9 +368,12 @@ function insertSampleCandidateData() {
       'A社（大手コンサル）', '', '', '第二志望',
       addDays(today, -1), 1, 4, 3, today,
       '働き方の実態を説明。実際の社員と面談を設定', today, 'CRITICAL', '未実行', '山田部長',
-      1.92, 3.0
+      1.92, 3.0, 'yamamoto@example.com',
+      addDays(today, -55), '実施済', addDays(today, -52), '実施済',
+      addDays(today, -48), '合格', 1, addDays(today, -42), '実施済',
+      addDays(today, -32), '実施済', addDays(today, -22), '実施済'
     ],
-    
+
     // 候補者7: 中村大輔（2次面接、承諾可能性中、NORMAL）
     [
       'C007', '中村大輔', '2次面接', addDays(now, -4), '中途', '伊藤主任', addDays(today, -18),
@@ -364,9 +382,12 @@ function insertSampleCandidateData() {
       'C社（外資系IT）', '', '', '第三志望',
       addDays(today, -6), 6, 3, 4, addDays(today, 2),
       '技術スタックの詳細を説明。CTOとの面談を設定', addDays(today, 2), 'NORMAL', '未実行', '伊藤主任',
-      0.86, 2.0
+      0.86, 2.0, 'nakamura@example.com',
+      addDays(today, -45), '実施済', addDays(today, -42), '実施済',
+      addDays(today, -38), '合格', 2, addDays(today, -33), '実施済',
+      addDays(today, -24), '実施済', '', '未実施'
     ],
-    
+
     // 候補者8: 小林愛（1次面接、承諾可能性低、LOW）
     [
       'C008', '小林愛', '1次面接', addDays(now, -7), '新卒', '鈴木課長', addDays(today, -6),
@@ -375,20 +396,26 @@ function insertSampleCandidateData() {
       'A社（大手コンサル）', 'B社（メガベンチャー）', 'C社（外資系IT）', '第五志望',
       addDays(today, -10), 10, 2, 5, addDays(today, 5),
       '企業ブランディング資料を提示。若手社員の成功事例を紹介', addDays(today, 5), 'LOW', '未実行', '鈴木課長',
-      0.33, 1.5
+      0.33, 1.5, 'kobayashi@example.com',
+      addDays(today, -20), '実施済', addDays(today, -18), '実施済',
+      addDays(today, -15), '合格', 0, '', '未実施',
+      '', '未実施', '', '未実施'
     ],
-    
-    // 候補者9: 加藤翔太（面談、承諾可能性高、NORMAL）
+
+    // 候補者9: 加藤翔太（初回面談、承諾可能性高、NORMAL）
     [
-      'C009', '加藤翔太', '面談', addDays(now, -3), '新卒', '伊藤主任', addDays(today, -4),
+      'C009', '加藤翔太', '初回面談', addDays(now, -3), '新卒', '伊藤主任', addDays(today, -4),
       78, 75, 3, 0.78, 0.82, 0.78, 0.75, 0.78,
       72, 70, 71, 68, 3, '高', 78, 70, 75, '社会貢献、成長環境', '給与がやや低い',
       'B社（メガベンチャー）', '', '', '第一志望',
       addDays(today, -1), 1, 2, 2, addDays(today, 4),
       '1次面接を実施。給与テーブルと昇給実績を提示', addDays(today, 4), 'NORMAL', '未実行', '伊藤主任',
-      1.08, 1.0
+      1.08, 1.0, 'kato@example.com',
+      addDays(today, -10), '実施済', '', '未実施',
+      '', '未実施', 0, '', '未実施',
+      '', '未実施', '', '未実施'
     ],
-    
+
     // 候補者10: 伊藤美穂（2次面接、承諾可能性中、HIGH）
     [
       'C010', '伊藤美穂', '2次面接', addDays(now, -2), '中途', '山田部長', addDays(today, -14),
@@ -397,7 +424,10 @@ function insertSampleCandidateData() {
       'A社（大手コンサル）', '', '', '第二志望',
       addDays(today, -4), 4, 3, 4, addDays(today, 1),
       '研修制度の詳細を説明。同じくキャリアチェンジした社員と面談', addDays(today, 1), 'HIGH', '未実行', '山田部長',
-      0.90, 2.0
+      0.90, 2.0, 'ito@example.com',
+      addDays(today, -38), '実施済', addDays(today, -36), '実施済',
+      addDays(today, -32), '合格', 1, addDays(today, -28), '実施済',
+      addDays(today, -21), '実施済', '', '未実施'
     ]
   ];
   
@@ -431,9 +461,9 @@ function insertSampleEvaluationLogData() {
       0.85, '課題を構造化し、戦略を立案できる。自分で意思決定した経験が豊富。',
       0.80, '当社を第一志望ではないが、成長環境に魅力を感じている。',
       0.85, '学生団体で新規プロジェクトを立ち上げ、100名規模のイベントを成功させた。',
-      'Medium', 85, 'Pass', 'https://example.com/eval/EV001'
+      'Medium', 85, 'Pass', 'https://example.com/eval/EV001', 90
     ],
-    
+
     // 佐藤花子の評価（2次面接）
     [
       'EV002', 'C002', '佐藤花子', addDays(now, -1), '2次面接', '鈴木課長',
@@ -441,9 +471,9 @@ function insertSampleEvaluationLogData() {
       0.75, '戦略立案の経験はあるが、実行経験が少ない。',
       0.70, '給与水準が懸念。他社（C社）の最終面接も控えている。',
       0.75, '前職でプロジェクトマネージャーとして、5名のチームをリード。',
-      'High', 75, 'Conditional', 'https://example.com/eval/EV002'
+      'High', 75, 'Conditional', 'https://example.com/eval/EV002', 70
     ],
-    
+
     // 鈴木一郎の評価（最終面接）
     [
       'EV003', 'C003', '鈴木一郎', addDays(now, -3), '最終面接', '山田部長',
@@ -451,9 +481,9 @@ function insertSampleEvaluationLogData() {
       0.90, '論理的思考力が高く、複雑な問題を構造化できる。',
       0.85, '当社を第一志望。他社選考は辞退する意向。',
       0.90, 'インターンで新規事業の立ち上げに貢献。売上100万円を達成。',
-      'None', 90, 'Pass', 'https://example.com/eval/EV003'
+      'None', 90, 'Pass', 'https://example.com/eval/EV003', 95
     ],
-    
+
     // 高橋美咲の評価（1次面接）
     [
       'EV004', 'C004', '高橋美咲', addDays(now, -2), '1次面接', '伊藤主任',
@@ -461,17 +491,17 @@ function insertSampleEvaluationLogData() {
       0.70, '分析力はあるが、自分で意思決定した経験が少ない。',
       0.65, '大手企業志向。当社の事業の将来性に不安を感じている。',
       0.70, 'ゼミでのリサーチプロジェクトで、データ分析を担当。',
-      'High', 70, 'Conditional', 'https://example.com/eval/EV004'
+      'High', 70, 'Conditional', 'https://example.com/eval/EV004', 60
     ],
     
-    // 渡辺健太の評価（面談）
+    // 渡辺健太の評価（初回面談）
     [
-      'EV005', 'C005', '渡辺健太', addDays(now, -5), '面談', '鈴木課長',
+      'EV005', 'C005', '渡辺健太', addDays(now, -5), '初回面談', '鈴木課長',
       0.65, 0.70, 'キャリアアップへの意欲はあるが、具体的なビジョンが不明確。',
       0.65, '前職での戦略立案経験はあるが、深さが不足。',
       0.60, '転職理由が曖昧。複数社を並行して選考中。',
       0.65, '前職で営業として、年間売上3000万円を達成。',
-      'Medium', 65, 'Conditional', 'https://example.com/eval/EV005'
+      'Medium', 65, 'Conditional', 'https://example.com/eval/EV005', 75
     ]
   ];
   
