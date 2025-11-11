@@ -66,15 +66,26 @@ function setupAllSheets() {
 }
 
 /**
- * カスタムメニューの追加
+ * スプレッドシート起動時に実行（カスタムメニュー作成）
  */
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
+
+  // ========== メニュー1: 📧 アンケート送信 ==========
+  ui.createMenu('📧 アンケート送信')
+    .addItem('初回面談アンケートを送信', 'showSendFirstInterviewSurvey')
+    .addItem('社員面談アンケートを送信', 'showSendEmployeeInterviewSurvey')
+    .addItem('2次面接アンケートを送信', 'showSendSecondInterviewSurvey')
+    .addItem('内定後アンケートを送信', 'showSendFinalInterviewSurvey')
+    .addSeparator()
+    .addItem('📊 送信履歴を確認', 'showSendHistory')
+    .addItem('📈 今日の送信状況', 'showTodaySendCount') // 【新規追加】
+    .addToUi();
+
+  // ========== メニュー2: 🤖 採用参謀AI ==========
   ui.createMenu('🤖 採用参謀AI')
     .addItem('📋 全シートを自動作成', 'setupAllSheets')
-    .addSeparator()
-    .addItem('📊 Dashboardを再生成', 'setupDashboardComplete') // 追加
-    .addSeparator()
+    .addItem('📊 Dashboardを再生成', 'setupDashboardComplete')
     .addSubMenu(ui.createMenu('🔗 Dify連携')
       .addItem('⚙️ API設定', 'setupDifyApiSettings')
       .addItem('📡 Webhook URL確認', 'showWebhookUrl')
@@ -84,6 +95,124 @@ function onOpen() {
     .addItem('🎨 条件付き書式を再設定', 'setupAllConditionalFormatting')
     .addItem('📊 初期データを再投入', 'insertAllInitialData')
     .addSeparator()
+    .addItem('🔍 システム状態を確認', 'showSystemStatus') // 【新規追加】
     .addItem('ℹ️ バージョン情報', 'showVersionInfo')
     .addToUi();
+}
+
+/**
+ * バージョン情報を表示
+ */
+function showVersionInfo() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets();
+
+  // 候補者数を取得
+  const masterSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
+  const candidateCount = masterSheet ? masterSheet.getLastRow() - 1 : 0;
+
+  // 評価ログ数を取得
+  const evalSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.EVALUATION_LOG);
+  const evalLogCount = evalSheet ? evalSheet.getLastRow() - 1 : 0;
+
+  // 送信履歴数を取得
+  const sendLogSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.SURVEY_SEND_LOG);
+  const sendLogCount = sendLogSheet ? sendLogSheet.getLastRow() - 1 : 0;
+
+  const message =
+    '【採用参謀AI - システム情報】\n\n' +
+    '📌 バージョン: v1.2.0\n' +
+    '📅 最終更新日: 2025-11-12\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '📊 データ統計\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    `・シート数: ${sheets.length}\n` +
+    `・候補者数: ${candidateCount}名\n` +
+    `・評価ログ数: ${evalLogCount}件\n` +
+    `・アンケート送信数: ${sendLogCount}件\n\n` +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '🔧 主要機能\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '✅ アンケート自動送信\n' +
+    '✅ アンケート種別管理（Phase 2実装）\n' +
+    '✅ 合格可能性AI評価\n' +
+    '✅ 承諾可能性AI予測\n' +
+    '✅ リスク検知\n' +
+    '✅ ネクストアクション提案\n' +
+    '✅ Dashboard自動更新\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '📚 ドキュメント\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    'GitHub: kgasnalo/gas-project_mvp_-\n' +
+    'Branch: claude/add-column-constants-config';
+
+  SpreadsheetApp.getUi().alert(
+    'バージョン情報',
+    message,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+/**
+ * システム状態を確認
+ */
+function showSystemStatus() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 必須シートの存在チェック
+  const requiredSheets = [
+    'Dashboard',
+    'Candidates_Master',
+    'Evaluation_Log',
+    'Engagement_Log',
+    'Survey_Response',
+    'Survey_Send_Log',
+    'Evidence',
+    'Risk',
+    'NextQ',
+    'Contact_History'
+  ];
+
+  let allSheetsExist = true;
+  let missingSheets = [];
+
+  requiredSheets.forEach(sheetName => {
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      allSheetsExist = false;
+      missingSheets.push(sheetName);
+    }
+  });
+
+  // メッセージ作成
+  let statusIcon = allSheetsExist ? '✅' : '❌';
+  let statusMessage = allSheetsExist ?
+    'すべての必須シートが正常です' :
+    `以下のシートが見つかりません:\n${missingSheets.join(', ')}`;
+
+  const sheets = ss.getSheets();
+
+  const message =
+    '【🔍 システム状態確認】\n\n' +
+    `${statusIcon} ${statusMessage}\n\n` +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '📊 シート構成\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    `・総シート数: ${sheets.length}\n` +
+    `・必須シート: ${requiredSheets.length - missingSheets.length}/${requiredSheets.length}\n\n` +
+    (missingSheets.length > 0 ?
+      '⚠️ 不足しているシート:\n' + missingSheets.map(s => `  - ${s}`).join('\n') + '\n\n' :
+      '') +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '🔧 推奨アクション\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    (missingSheets.length > 0 ?
+      '「📋 全シートを自動作成」を実行して\n不足シートを作成してください' :
+      'システムは正常に動作しています');
+
+  SpreadsheetApp.getUi().alert(
+    'システム状態',
+    message,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
 }
