@@ -37,7 +37,7 @@ const CONFIG = {
   
   // データ検証の選択肢
   VALIDATION_OPTIONS: {
-    STATUS: ['面談', '1次面接', '2次面接', '最終面接', '内定通知済', '承諾', '辞退', '見送り'],
+    STATUS: ['応募', '初回面談', '適性検査', '1次面接', '社員面談', '2次面接', '最終面接', '内定通知済', '承諾', '辞退', '見送り'],
     CATEGORY: ['新卒', '中途'],
     URGENCY: ['CRITICAL', 'HIGH', 'NORMAL', 'LOW'],
     CONFIDENCE: ['低', '中', '高'],
@@ -45,8 +45,10 @@ const CONFIG = {
     RECOMMENDATION: ['Pass', 'Conditional', 'Fail'],
     CONTACT_TYPE: ['メール', '電話', '面談', '面接', 'アンケート'],
     ACTION_STATUS: ['未実行', '実行中', '完了'],
-    SURVEY_PHASE: ['初回面談', '社員面談', '2次面接', '内定後'], // 新規追加
-    SEND_STATUS: ['成功', '失敗'] // 新規追加
+    SURVEY_PHASE: ['初回面談', '社員面談', '2次面接', '内定後'],
+    SEND_STATUS: ['成功', '失敗'],
+    IMPLEMENTATION_STATUS: ['未実施', '実施済'], // 新規追加
+    TEST_RESULT: ['合格', '不合格', '未実施'] // 新規追加
   },
   
   // 列幅の設定（ピクセル）
@@ -116,7 +118,20 @@ const CONFIG = {
       ACTION_OWNER: 39,       // AN列
       PRIORITY_SCORE: 40,     // AO列
       URGENCY_COEFFICIENT: 41, // AP列
-      EMAIL: 42               // AQ列（新規）
+      EMAIL: 42,              // AQ列
+      FIRST_INTERVIEW_DATE: 43,    // AR列（新規）
+      FIRST_INTERVIEW_STATUS: 44,  // AS列（新規）
+      APTITUDE_TEST_DATE: 45,      // AT列（新規）
+      APTITUDE_TEST_STATUS: 46,    // AU列（新規）
+      FIRST_SELECTION_DATE: 47,    // AV列（新規）
+      FIRST_SELECTION_RESULT: 48,  // AW列（新規）
+      EMPLOYEE_INTERVIEW_COUNT: 49, // AX列（新規）
+      EMPLOYEE_INTERVIEW_DATE: 50,  // AY列（新規）
+      EMPLOYEE_INTERVIEW_STATUS: 51, // AZ列（新規）
+      SECOND_INTERVIEW_DATE: 52,    // BA列（新規）
+      SECOND_INTERVIEW_STATUS: 53,  // BB列（新規）
+      FINAL_INTERVIEW_DATE: 54,     // BC列（新規）
+      FINAL_INTERVIEW_STATUS: 55    // BD列（新規）
     },
     EVALUATION_LOG: {
       LOG_ID: 0,              // A列
