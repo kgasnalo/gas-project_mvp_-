@@ -51,8 +51,16 @@ function setupCandidatesMaster() {
       // 注力度合い AO-AP列
       '注力度合いスコア', '緊急度係数',
 
-      // 【新規追加】AQ列
-      'メールアドレス' // AQ列（43列目）
+      // 連絡先 AQ列
+      'メールアドレス',
+
+      // 【新規追加】選考ステップ追跡 AR-BD列
+      '初回面談日', '初回面談実施ステータス',
+      '適性検査日', '適性検査実施ステータス',
+      '1次面接日', '1次面接結果',
+      '社員面談実施回数', '社員面談日（最終）', '社員面談実施ステータス',
+      '2次面接日', '2次面接実施ステータス',
+      '最終面接日', '最終面接実施ステータス'
     ];
     
     setHeaders(sheet, headers);
@@ -101,7 +109,20 @@ function setupCandidatesMaster() {
       40: 140,  // AN: アクション実行者
       41: 140,  // AO: 注力度合いスコア
       42: 120,  // AP: 緊急度係数
-      43: 200   // AQ: メールアドレス（新規）
+      43: 200,  // AQ: メールアドレス
+      44: 140,  // AR: 初回面談日（新規）
+      45: 150,  // AS: 初回面談実施ステータス（新規）
+      46: 140,  // AT: 適性検査日（新規）
+      47: 150,  // AU: 適性検査実施ステータス（新規）
+      48: 140,  // AV: 1次面接日（新規）
+      49: 140,  // AW: 1次面接結果（新規）
+      50: 140,  // AX: 社員面談実施回数（新規）
+      51: 140,  // AY: 社員面談日（最終）（新規）
+      52: 150,  // AZ: 社員面談実施ステータス（新規）
+      53: 140,  // BA: 2次面接日（新規）
+      54: 150,  // BB: 2次面接実施ステータス（新規）
+      55: 140,  // BC: 最終面接日（新規）
+      56: 150   // BD: 最終面接実施ステータス（新規）
     };
     
     // 列幅を設定
@@ -122,6 +143,15 @@ function setupCandidatesMaster() {
     sheet.getRange('AE2:AE1000').setNumberFormat('yyyy-mm-dd');
     sheet.getRange('AI2:AI1000').setNumberFormat('yyyy-mm-dd');
     sheet.getRange('AK2:AK1000').setNumberFormat('yyyy-mm-dd');
+    sheet.getRange('AR2:AR1000').setNumberFormat('yyyy-mm-dd'); // 初回面談日
+    sheet.getRange('AT2:AT1000').setNumberFormat('yyyy-mm-dd'); // 適性検査日
+    sheet.getRange('AV2:AV1000').setNumberFormat('yyyy-mm-dd'); // 1次面接日
+    sheet.getRange('AY2:AY1000').setNumberFormat('yyyy-mm-dd'); // 社員面談日（最終）
+    sheet.getRange('BA2:BA1000').setNumberFormat('yyyy-mm-dd'); // 2次面接日
+    sheet.getRange('BC2:BC1000').setNumberFormat('yyyy-mm-dd'); // 最終面接日
+
+    // 整数列のフォーマット設定
+    sheet.getRange('AX2:AX1000').setNumberFormat('0'); // 社員面談実施回数
     
     // テキストの折り返しを設定
     sheet.getRange('Y2:Z1000').setWrap(true);  // コアモチベーション、主要懸念事項
