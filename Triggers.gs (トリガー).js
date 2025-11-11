@@ -1,6 +1,6 @@
 /**
  * スプレッドシート編集時のトリガー
- * Candidates_MasterのAS, AZ, BB, BD列が「実施済」に変更されたときにアンケートを自動送信
+ * Candidates_MasterのAS, AZ列が「実施済」、BB, BD列が「合格」または「不合格」に変更されたときにアンケートを自動送信
  */
 function onEdit(e) {
   try {
@@ -22,23 +22,29 @@ function onEdit(e) {
 
     // 新しい値を取得
     const newValue = e.value;
-
-    // 「実施済」に変更されたかチェック
-    if (newValue !== '実施済') return;
+    if (!newValue) return;
 
     // どの列が編集されたかによって処理を分岐
     switch (col - 1) { // 0-indexed
       case CONFIG.COLUMNS.CANDIDATES_MASTER.FIRST_INTERVIEW_STATUS: // AS列
-        handleFirstInterviewSurvey(sheet, row);
+        if (newValue === '実施済') {
+          handleFirstInterviewSurvey(sheet, row);
+        }
         break;
       case CONFIG.COLUMNS.CANDIDATES_MASTER.EMPLOYEE_INTERVIEW_STATUS: // AZ列
-        handleEmployeeInterviewSurvey(sheet, row);
+        if (newValue === '実施済') {
+          handleEmployeeInterviewSurvey(sheet, row);
+        }
         break;
       case CONFIG.COLUMNS.CANDIDATES_MASTER.SECOND_INTERVIEW_STATUS: // BB列
-        handleSecondInterviewSurvey(sheet, row);
+        if (newValue === '合格' || newValue === '不合格') {
+          handleSecondInterviewSurvey(sheet, row);
+        }
         break;
       case CONFIG.COLUMNS.CANDIDATES_MASTER.FINAL_INTERVIEW_STATUS: // BD列
-        handleFinalInterviewSurvey(sheet, row);
+        if (newValue === '合格' || newValue === '不合格') {
+          handleFinalInterviewSurvey(sheet, row);
+        }
         break;
     }
 
