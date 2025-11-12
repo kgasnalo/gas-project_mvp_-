@@ -679,31 +679,41 @@ function setupContactHistorySheet() {
  */
 function setupSurveyResponseSheet() {
   const sheet = getOrCreateSheet(CONFIG.SHEET_NAMES.SURVEY_RESPONSE);
-  
+
   const headers = [
     'response_id', 'candidate_id', '氏名', '回答日時',
-    '志望度（1-10）', '懸念事項', '他社選考状況', 'その他コメント'
+    '志望度（1-10）', '懸念事項', '他社選考状況', 'その他コメント',
+    'アンケート種別' // 【新規追加】I列
   ];
-  
+
   setHeaders(sheet, headers);
-  
+
   const columnWidths = {
-    1: 120,   // response_id
-    2: 100,   // candidate_id
-    3: 120,   // 氏名
-    4: 160,   // 回答日時
-    5: 120,   // 志望度（1-10）
-    6: 300,   // 懸念事項
-    7: 300,   // 他社選考状況
-    8: 300    // その他コメント
+    1: 150,   // A: response_id
+    2: 100,   // B: candidate_id
+    3: 120,   // C: 氏名
+    4: 160,   // D: 回答日時
+    5: 80,    // E: 志望度（1-10）
+    6: 250,   // F: 懸念事項
+    7: 200,   // G: 他社選考状況
+    8: 250,   // H: その他コメント
+    9: 120    // I: アンケート種別（新規追加）
   };
-  
+
   for (let col in columnWidths) {
     sheet.setColumnWidth(parseInt(col), columnWidths[col]);
   }
-  
+
+  // フォーマット設定
   sheet.getRange('D2:D1000').setNumberFormat('yyyy-mm-dd hh:mm:ss');
-  sheet.getRange('F2:H1000').setWrap(true);
+  sheet.getRange('E2:E1000').setNumberFormat('0');
+
+  // テキストの折り返し
+  sheet.getRange('F2:F1000').setWrap(true);
+  sheet.getRange('G2:G1000').setWrap(true);
+  sheet.getRange('H2:H1000').setWrap(true);
+
+  Logger.log('✅ Survey_Responseシートのセットアップが完了しました（I列追加）');
 }
 
 /**

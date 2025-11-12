@@ -221,19 +221,57 @@ function isAlreadySent(candidateId, phase) {
 }
 
 /**
- * スプレッドシート起動時のメニュー追加
+ * 今日の送信状況を表示
  */
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
+function showTodaySendCount() {
+  const todayCount = getTodaySendCount(); // EmailSender.gsの関数を利用
+  const limit = CONFIG.EMAIL.DAILY_LIMIT;
+  const remaining = limit - todayCount;
 
-  ui.createMenu('📧 アンケート送信')
-    .addItem('✉️ 初回面談アンケート送信', 'showSendFirstInterviewSurvey')
-    .addItem('✉️ 社員面談アンケート送信', 'showSendEmployeeInterviewSurvey')
-    .addItem('✉️ 2次面接アンケート送信', 'showSendSecondInterviewSurvey')
-    .addItem('✉️ 内定後アンケート送信', 'showSendFinalInterviewSurvey')
-    .addSeparator()
-    .addItem('📊 送信履歴を表示', 'showSendHistory')
-    .addToUi();
+  // リセット時刻（翌日0:00）
+  const now = new Date();
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const hoursUntilReset = Math.floor((tomorrow - now) / (1000 * 60 * 60));
+  const minutesUntilReset = Math.floor(((tomorrow - now) % (1000 * 60 * 60)) / (1000 * 60));
+
+  // メッセージ作成
+  let statusIcon = '';
+  let statusMessage = '';
+
+  if (remaining > 50) {
+    statusIcon = '✅';
+    statusMessage = '十分な送信枠があります';
+  } else if (remaining > 20) {
+    statusIcon = '⚠️';
+    statusMessage = '送信枠が少なくなっています';
+  } else if (remaining > 0) {
+    statusIcon = '🚨';
+    statusMessage = '送信枠がほぼ上限です';
+  } else {
+    statusIcon = '❌';
+    statusMessage = '本日の送信制限に達しました';
+  }
+
+  const message =
+    '【📧 今日のアンケート送信状況】\n\n' +
+    `${statusIcon} ${statusMessage}\n\n` +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    `📤 本日の送信数: ${todayCount} / ${limit}通\n` +
+    `📥 残り送信可能: ${remaining}通\n\n` +
+    `🕐 制限リセット: 約${hoursUntilReset}時間${minutesUntilReset}分後\n` +
+    '　 （翌日0:00にリセットされます）\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '💡 ヒント\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '・送信制限はGmailの仕様です\n' +
+    '・安全のため90通/日に設定\n' +
+    '・重要な送信を優先してください';
+
+  SpreadsheetApp.getUi().alert(
+    '送信状況',
+    message,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
 }
 
 /**
