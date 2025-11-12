@@ -9,6 +9,7 @@ function setupAllDataValidation() {
     setupEvaluationLogValidation();
     setupEngagementLogValidation();
     setupSurveyResponseValidation(); // 【新規追加】
+    setupSurveyAnalysisValidation(); // 【Phase 2 Step 2追加】
     setupOtherSheetsValidation();
 
     Logger.log('✅ 全データ検証の設定が完了しました');
@@ -250,4 +251,35 @@ function setupSurveyResponseValidation() {
   sheet.getRange('E2:E1000').setDataValidation(aspirationRule);
 
   Logger.log('✅ Survey_Responseのデータ検証を設定しました');
+}
+
+/**
+ * Survey_Analysisシートのデータ検証を設定
+ */
+function setupSurveyAnalysisValidation() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName(CONFIG.SHEET_NAMES.SURVEY_ANALYSIS);
+
+  if (!sheet) {
+    Logger.log('⚠️ Survey_Analysisシートが見つかりません');
+    return;
+  }
+
+  // D列: phase（アンケート種別）
+  setDropdownValidation(
+    sheet,
+    'D2:D1000',
+    ['初回面談', '社員面談', '2次面接', '内定後'],
+    'アンケート種別を選択してください'
+  );
+
+  // H列: speed_score（0-100点の整数）
+  const scoreRule = SpreadsheetApp.newDataValidation()
+    .requireNumberBetween(0, 100)
+    .setAllowInvalid(false)
+    .setHelpText('0から100の整数を入力してください')
+    .build();
+  sheet.getRange('H2:H1000').setDataValidation(scoreRule);
+
+  Logger.log('✅ Survey_Analysisのデータ検証を設定しました');
 }

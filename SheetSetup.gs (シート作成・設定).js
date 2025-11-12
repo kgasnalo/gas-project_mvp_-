@@ -60,7 +60,10 @@ function setupCandidatesMaster() {
       '1次面接日', '1次面接結果',
       '社員面談実施回数', '社員面談日（最終）', '社員面談実施ステータス',
       '2次面接日', '2次面接結果',
-      '最終面接日', '最終面接結果'
+      '最終面接日', '最終面接結果',
+
+      // 【Phase 2 Step 2追加】アンケート回答速度スコア BE列
+      'アンケート回答速度スコア'
     ];
     
     setHeaders(sheet, headers);
@@ -122,7 +125,8 @@ function setupCandidatesMaster() {
       53: 140,  // BA: 2次面接日（新規）
       54: 150,  // BB: 2次面接実施ステータス（新規）
       55: 140,  // BC: 最終面接日（新規）
-      56: 150   // BD: 最終面接実施ステータス（新規）
+      56: 150,  // BD: 最終面接実施ステータス（新規）
+      57: 180   // BE: アンケート回答速度スコア（Phase 2 Step 2追加）
     };
     
     // 列幅を設定
@@ -152,7 +156,8 @@ function setupCandidatesMaster() {
 
     // 整数列のフォーマット設定
     sheet.getRange('AX2:AX1000').setNumberFormat('0'); // 社員面談実施回数
-    
+    sheet.getRange('BE2:BE1000').setNumberFormat('0'); // アンケート回答速度スコア（Phase 2 Step 2追加）
+
     // テキストの折り返しを設定
     sheet.getRange('Y2:Z1000').setWrap(true);  // コアモチベーション、主要懸念事項
     sheet.getRange('AJ2:AJ1000').setWrap(true); // 次推奨アクション
@@ -534,6 +539,9 @@ function setupOtherSheets() {
 
     // Survey_Send_Log（新規追加）
     setupSurveySendLog();
+
+    // Survey_Analysis（Phase 2 Step 2で追加）
+    setupSurveyAnalysis();
 
     // README（システム説明）
     setupReadmeSheet();
@@ -1297,6 +1305,54 @@ function setupSurveySendLog() {
 
   } catch (error) {
     logError('setupSurveySendLog', error);
+    throw error;
+  }
+}
+
+/**
+ * Survey_Analysisシートを作成
+ * アンケート回答速度を分析・保存するシート
+ */
+function setupSurveyAnalysis() {
+  try {
+    const sheet = getOrCreateSheet(CONFIG.SHEET_NAMES.SURVEY_ANALYSIS);
+
+    // ヘッダー行の定義
+    const headers = [
+      'analysis_id',
+      'candidate_id',
+      'candidate_name',
+      'phase',
+      'send_time',
+      'response_time',
+      'response_speed_hours',
+      'speed_score',
+      'created_at'
+    ];
+
+    setHeaders(sheet, headers);
+
+    // 列幅を調整
+    sheet.setColumnWidth(1, 150);  // A: analysis_id
+    sheet.setColumnWidth(2, 120);  // B: candidate_id
+    sheet.setColumnWidth(3, 120);  // C: candidate_name
+    sheet.setColumnWidth(4, 120);  // D: phase
+    sheet.setColumnWidth(5, 160);  // E: send_time
+    sheet.setColumnWidth(6, 160);  // F: response_time
+    sheet.setColumnWidth(7, 140);  // G: response_speed_hours
+    sheet.setColumnWidth(8, 120);  // H: speed_score
+    sheet.setColumnWidth(9, 160);  // I: created_at
+
+    // フォーマット設定
+    sheet.getRange('E2:F1000').setNumberFormat('yyyy-mm-dd hh:mm:ss'); // send_time, response_time
+    sheet.getRange('G2:G1000').setNumberFormat('0.00'); // response_speed_hours（小数点2桁）
+    sheet.getRange('H2:H1000').setNumberFormat('0'); // speed_score（整数）
+    sheet.getRange('I2:I1000').setNumberFormat('yyyy-mm-dd hh:mm:ss'); // created_at
+
+    Logger.log('✅ Survey_Analysisシート作成完了');
+
+  } catch (error) {
+    logError('setupSurveyAnalysis', error);
     throw error;
   }
 }

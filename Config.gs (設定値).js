@@ -19,6 +19,7 @@ const CONFIG = {
     COMPETITOR_COMPARISON: 'Competitor_Comparison',
     ARCHIVE: 'Archive',
     SURVEY_SEND_LOG: 'Survey_Send_Log', // 新規追加
+    SURVEY_ANALYSIS: 'Survey_Analysis', // Phase 2 Step 2で追加
     ANKETO_URL: 'アンケートURL' // 新規追加
   },
   
@@ -131,7 +132,8 @@ const CONFIG = {
       SECOND_INTERVIEW_DATE: 52,    // BA列（新規）
       SECOND_INTERVIEW_STATUS: 53,  // BB列（新規）
       FINAL_INTERVIEW_DATE: 54,     // BC列（新規）
-      FINAL_INTERVIEW_STATUS: 55    // BD列（新規）
+      FINAL_INTERVIEW_STATUS: 55,   // BD列（新規）
+      SURVEY_RESPONSE_SPEED_SCORE: 56 // BE列（Phase 2 Step 2追加）
     },
     EVALUATION_LOG: {
       LOG_ID: 0,              // A列
@@ -177,6 +179,19 @@ const CONFIG = {
       OTHER_COMPANIES: 6,    // G列: 他社選考状況
       COMMENTS: 7,           // H列: その他コメント
       PHASE: 8               // I列: アンケート種別（新規追加）
+    },
+
+    // ========== 【新規追加】SURVEY_ANALYSIS ==========
+    SURVEY_ANALYSIS: {
+      ANALYSIS_ID: 0,           // A列
+      CANDIDATE_ID: 1,          // B列
+      CANDIDATE_NAME: 2,        // C列
+      PHASE: 3,                 // D列: アンケート種別
+      SEND_TIME: 4,             // E列: 送信日時
+      RESPONSE_TIME: 5,         // F列: 回答日時
+      RESPONSE_SPEED_HOURS: 6,  // G列: 回答速度（時間）
+      SPEED_SCORE: 7,           // H列: 回答速度スコア（0-100）
+      CREATED_AT: 8             // I列: 作成日時
     }
   },
 
