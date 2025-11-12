@@ -1,6 +1,7 @@
 /**
  * スプレッドシート編集時のトリガー
  * Candidates_MasterのAS, AZ列が「実施済」、BB, BD列が「合格」または「不合格」に変更されたときにアンケートを自動送信
+ * Survey_ResponseのD列（回答日時）またはI列（アンケート種別）が編集されたときに回答速度を計算
  */
 function onEdit(e) {
   try {
@@ -9,43 +10,60 @@ function onEdit(e) {
 
     const sheet = e.source.getActiveSheet();
     const range = e.range;
-
-    // Candidates_Masterシート以外は無視
-    if (sheet.getName() !== CONFIG.SHEET_NAMES.CANDIDATES_MASTER) return;
-
-    // 編集された列を取得
     const col = range.getColumn();
     const row = range.getRow();
 
     // ヘッダー行は無視
     if (row === 1) return;
 
-    // 新しい値を取得
-    const newValue = e.value;
-    if (!newValue) return;
+    // ========== Candidates_Masterの処理 ==========
+    if (sheet.getName() === CONFIG.SHEET_NAMES.CANDIDATES_MASTER) {
+      // 新しい値を取得
+      const newValue = e.value;
+      if (!newValue) return;
 
-    // どの列が編集されたかによって処理を分岐
-    switch (col - 1) { // 0-indexed
-      case CONFIG.COLUMNS.CANDIDATES_MASTER.FIRST_INTERVIEW_STATUS: // AS列
-        if (newValue === '実施済') {
-          handleFirstInterviewSurvey(sheet, row);
+      // どの列が編集されたかによって処理を分岐
+      switch (col - 1) { // 0-indexed
+        case CONFIG.COLUMNS.CANDIDATES_MASTER.FIRST_INTERVIEW_STATUS: // AS列
+          if (newValue === '実施済') {
+            handleFirstInterviewSurvey(sheet, row);
+          }
+          break;
+        case CONFIG.COLUMNS.CANDIDATES_MASTER.EMPLOYEE_INTERVIEW_STATUS: // AZ列
+          if (newValue === '実施済') {
+            handleEmployeeInterviewSurvey(sheet, row);
+          }
+          break;
+        case CONFIG.COLUMNS.CANDIDATES_MASTER.SECOND_INTERVIEW_STATUS: // BB列
+          if (newValue === '合格' || newValue === '不合格') {
+            handleSecondInterviewSurvey(sheet, row);
+          }
+          break;
+        case CONFIG.COLUMNS.CANDIDATES_MASTER.FINAL_INTERVIEW_STATUS: // BD列
+          if (newValue === '合格' || newValue === '不合格') {
+            handleFinalInterviewSurvey(sheet, row);
+          }
+          break;
+      }
+    }
+
+    // ========== 【Phase 2 Step 3追加】Survey_Responseの処理 ==========
+    else if (sheet.getName() === CONFIG.SHEET_NAMES.SURVEY_RESPONSE) {
+      // D列（回答日時）またはI列（アンケート種別）が編集された場合
+      if (col === CONFIG.COLUMNS.SURVEY_RESPONSE.RESPONSE_DATE + 1 ||
+          col === CONFIG.COLUMNS.SURVEY_RESPONSE.PHASE + 1) {
+
+        const candidateId = sheet.getRange(row, CONFIG.COLUMNS.SURVEY_RESPONSE.CANDIDATE_ID + 1).getValue();
+        const phase = sheet.getRange(row, CONFIG.COLUMNS.SURVEY_RESPONSE.PHASE + 1).getValue();
+
+        if (candidateId && phase) {
+          Logger.log(`📊 Survey_Response更新検知: ${candidateId} (${phase})`);
+
+          // 回答速度を計算・更新（少し遅延させる）
+          Utilities.sleep(1000); // 1秒待機（データ確定を待つ）
+          calculateAndUpdateResponseSpeed(candidateId, phase);
         }
-        break;
-      case CONFIG.COLUMNS.CANDIDATES_MASTER.EMPLOYEE_INTERVIEW_STATUS: // AZ列
-        if (newValue === '実施済') {
-          handleEmployeeInterviewSurvey(sheet, row);
-        }
-        break;
-      case CONFIG.COLUMNS.CANDIDATES_MASTER.SECOND_INTERVIEW_STATUS: // BB列
-        if (newValue === '合格' || newValue === '不合格') {
-          handleSecondInterviewSurvey(sheet, row);
-        }
-        break;
-      case CONFIG.COLUMNS.CANDIDATES_MASTER.FINAL_INTERVIEW_STATUS: // BD列
-        if (newValue === '合格' || newValue === '不合格') {
-          handleFinalInterviewSurvey(sheet, row);
-        }
-        break;
+      }
     }
 
   } catch (error) {
