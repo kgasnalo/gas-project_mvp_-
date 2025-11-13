@@ -622,13 +622,16 @@ function clearTestData() {
       const sendLogData = sendLogSheet.getDataRange().getValues();
       const rowsToDelete = [];
 
-      for (let i = sendLogData.length - 1; i >= 1; i--) {
-        const logId = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.LOG_ID];
-        if (logId && logId.toString().startsWith('LOG-TEST-')) {
+      // データを走査してテストデータの行番号を収集
+      for (let i = 1; i < sendLogData.length; i++) {
+        const sendId = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.SEND_ID]; // ✅ LOG_ID → SEND_ID に修正
+        if (sendId && sendId.toString().startsWith('LOG-TEST-')) {
           rowsToDelete.push(i + 1); // 行番号は1始まり
         }
       }
 
+      // 後ろの行から削除（行番号のズレを防ぐ）
+      rowsToDelete.sort((a, b) => b - a); // 降順ソート
       rowsToDelete.forEach(row => {
         sendLogSheet.deleteRow(row);
       });
@@ -642,13 +645,16 @@ function clearTestData() {
       const responseData = responseSheet.getDataRange().getValues();
       const rowsToDelete = [];
 
-      for (let i = responseData.length - 1; i >= 1; i--) {
+      // データを走査してテストデータの行番号を収集
+      for (let i = 1; i < responseData.length; i++) {
         const responseId = responseData[i][CONFIG.COLUMNS.SURVEY_RESPONSE.RESPONSE_ID];
         if (responseId && responseId.toString().startsWith('RESP-TEST-')) {
           rowsToDelete.push(i + 1);
         }
       }
 
+      // 後ろの行から削除（行番号のズレを防ぐ）
+      rowsToDelete.sort((a, b) => b - a); // 降順ソート
       rowsToDelete.forEach(row => {
         responseSheet.deleteRow(row);
       });
@@ -662,13 +668,16 @@ function clearTestData() {
       const analysisData = analysisSheet.getDataRange().getValues();
       const rowsToDelete = [];
 
-      for (let i = analysisData.length - 1; i >= 1; i--) {
+      // データを走査してテストデータの行番号を収集
+      for (let i = 1; i < analysisData.length; i++) {
         const analysisId = analysisData[i][CONFIG.COLUMNS.SURVEY_ANALYSIS.ANALYSIS_ID];
         if (analysisId && analysisId.toString().includes('TEST')) {
           rowsToDelete.push(i + 1);
         }
       }
 
+      // 後ろの行から削除（行番号のズレを防ぐ）
+      rowsToDelete.sort((a, b) => b - a); // 降順ソート
       rowsToDelete.forEach(row => {
         analysisSheet.deleteRow(row);
       });
@@ -741,10 +750,10 @@ function checkTestDataStatus() {
       let successCount = 0;
 
       for (let i = 1; i < sendLogData.length; i++) {
-        const logId = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.LOG_ID];
+        const sendId = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.SEND_ID]; // ✅ LOG_ID → SEND_ID に修正
         const status = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.STATUS];
 
-        if (logId && logId.toString().startsWith('LOG-TEST-')) {
+        if (sendId && sendId.toString().startsWith('LOG-TEST-')) {
           testCount++;
           if (status === '成功') successCount++;
         }
