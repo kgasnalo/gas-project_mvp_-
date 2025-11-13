@@ -96,6 +96,11 @@ function onOpen() {
     .addItem('📊 初期データを再投入', 'insertAllInitialData')
     .addSeparator()
     .addItem('📈 回答速度を一括計算', 'calculateAllResponseSpeeds') // 【Phase 2 Step 3追加】
+    .addSubMenu(ui.createMenu('🧪 テストデータ')
+      .addItem('📊 テストデータ状況を確認', 'checkTestDataStatus')
+      .addItem('➕ テストデータを生成', 'generateAllTestData')
+      .addItem('🗑️ テストデータをクリア', 'clearAllTestData'))
+    .addSeparator()
     .addItem('🔍 システム状態を確認', 'showSystemStatus') // 【新規追加】
     .addItem('ℹ️ バージョン情報', 'showVersionInfo')
     .addToUi();
