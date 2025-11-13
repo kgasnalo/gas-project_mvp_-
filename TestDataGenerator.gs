@@ -7,9 +7,10 @@
  * - Survey_Responseへのテストデータ投入
  * - 様々な回答速度パターンのテストデータ生成
  * - テストデータのクリア
+ * - データバリデーション（列数チェック）
  *
- * @version 1.0
- * @date 2025-11-12
+ * @version 1.1
+ * @date 2025-11-13
  */
 
 /**
@@ -118,15 +119,14 @@ function generateSurveySendLogTestData() {
 
         // Survey_Send_Logに追加
         sendLogSheet.appendRow([
-          logId,                    // A: log_id
-          candidate.candidateId,    // B: candidate_id
-          candidate.name,           // C: name
-          phase,                    // D: phase
-          candidate.email,          // E: email
-          sendTime,                 // F: send_time
-          '成功',                   // G: status
-          '',                       // H: error_message
-          new Date()                // I: created_at
+          logId,                    // A: SEND_ID
+          candidate.candidateId,    // B: CANDIDATE_ID
+          candidate.name,           // C: NAME
+          candidate.email,          // D: EMAIL
+          phase,                    // E: PHASE
+          sendTime,                 // F: SEND_TIME
+          '成功',                   // G: STATUS
+          ''                        // H: ERROR_MSG
         ]);
 
         count++;
@@ -202,16 +202,15 @@ function generateSurveyResponseTestData() {
 
       // Survey_Responseに追加
       responseSheet.appendRow([
-        responseId,               // A: response_id
-        candidateId,              // B: candidate_id
-        name,                     // C: name
-        responseDate,             // D: response_date
-        aspiration,               // E: aspiration_level (志望度)
-        '',                       // F: concerns (懸念事項)
-        '',                       // G: appeal_points (アピールポイント)
-        '',                       // H: feedback (フィードバック)
-        phase,                    // I: phase (アンケート種別)
-        new Date()                // J: created_at
+        responseId,               // A: RESPONSE_ID
+        candidateId,              // B: CANDIDATE_ID
+        name,                     // C: NAME
+        responseDate,             // D: RESPONSE_DATE
+        aspiration,               // E: ASPIRATION (志望度)
+        '',                       // F: CONCERNS (懸念事項)
+        '',                       // G: OTHER_COMPANIES (他社選考状況)
+        '',                       // H: COMMENTS (その他コメント)
+        phase                     // I: PHASE (アンケート種別)
       ]);
 
       count++;
@@ -419,5 +418,150 @@ function checkTestDataStatus() {
 
   } catch (error) {
     Logger.log(`❌ checkTestDataStatusエラー: ${error.message}`);
+  }
+}
+
+/**
+ * データバリデーション：ヘッダー数とデータ列数の一致をチェック
+ *
+ * @param {string} sheetName - シート名
+ * @return {Object} { valid: boolean, errors: Array }
+ */
+function validateSheetColumnCount(sheetName) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(sheetName);
+
+    if (!sheet) {
+      return {
+        valid: false,
+        errors: [`シート「${sheetName}」が見つかりません`]
+      };
+    }
+
+    const data = sheet.getDataRange().getValues();
+
+    if (data.length < 2) {
+      return {
+        valid: true,
+        errors: []
+      };
+    }
+
+    const headerCount = data[0].filter(cell => cell !== '').length;
+    const errors = [];
+
+    // 各データ行の列数をチェック
+    for (let i = 1; i < data.length; i++) {
+      const rowData = data[i];
+      const nonEmptyCount = rowData.filter(cell => cell !== '').length;
+
+      if (nonEmptyCount !== headerCount) {
+        errors.push(
+          `行${i + 1}: ヘッダー${headerCount}列に対してデータ${nonEmptyCount}列（不一致）`
+        );
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      headerCount: headerCount,
+      dataRowCount: data.length - 1,
+      errors: errors
+    };
+
+  } catch (error) {
+    Logger.log(`❌ validateSheetColumnCountエラー: ${error.message}`);
+    return {
+      valid: false,
+      errors: [`エラー: ${error.message}`]
+    };
+  }
+}
+
+/**
+ * 全テストデータのバリデーションを実行
+ */
+function validateAllTestData() {
+  try {
+    Logger.log('🔍 テストデータのバリデーションを開始します...');
+
+    const results = [];
+
+    // Survey_Send_Logのバリデーション
+    const sendLogResult = validateSheetColumnCount(CONFIG.SHEET_NAMES.SURVEY_SEND_LOG);
+    results.push({
+      sheet: 'Survey_Send_Log',
+      ...sendLogResult
+    });
+
+    // Survey_Responseのバリデーション
+    const responseResult = validateSheetColumnCount(CONFIG.SHEET_NAMES.SURVEY_RESPONSE);
+    results.push({
+      sheet: 'Survey_Response',
+      ...responseResult
+    });
+
+    // Survey_Analysisのバリデーション
+    const analysisResult = validateSheetColumnCount(CONFIG.SHEET_NAMES.SURVEY_ANALYSIS);
+    results.push({
+      sheet: 'Survey_Analysis',
+      ...analysisResult
+    });
+
+    // 結果をログ出力
+    let allValid = true;
+    let message = '【🔍 データバリデーション結果】\n\n';
+
+    results.forEach(result => {
+      if (result.valid) {
+        Logger.log(`✅ ${result.sheet}: 問題なし（ヘッダー${result.headerCount}列、データ${result.dataRowCount}行）`);
+        message += `✅ ${result.sheet}\n`;
+        message += `   ヘッダー: ${result.headerCount}列\n`;
+        message += `   データ: ${result.dataRowCount}行\n`;
+        message += `   検証: 問題なし\n\n`;
+      } else {
+        allValid = false;
+        Logger.log(`❌ ${result.sheet}: エラーあり`);
+        result.errors.forEach(error => {
+          Logger.log(`   - ${error}`);
+        });
+        message += `❌ ${result.sheet}\n`;
+        message += `   エラー:\n`;
+        result.errors.forEach(error => {
+          message += `   - ${error}\n`;
+        });
+        message += '\n';
+      }
+    });
+
+    if (allValid) {
+      message += '━━━━━━━━━━━━━━━━\n';
+      message += '✅ 全シートのデータ構造が正しいです';
+    } else {
+      message += '━━━━━━━━━━━━━━━━\n';
+      message += '⚠️ データ構造にエラーがあります\n';
+      message += '上記のエラーを修正してください';
+    }
+
+    SpreadsheetApp.getUi().alert(
+      'データバリデーション結果',
+      message,
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+
+    return allValid;
+
+  } catch (error) {
+    Logger.log(`❌ validateAllTestDataエラー: ${error.message}`);
+    Logger.log(error.stack);
+
+    SpreadsheetApp.getUi().alert(
+      'エラー',
+      `バリデーション中にエラーが発生しました:\n${error.message}`,
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+
+    return false;
   }
 }
