@@ -102,7 +102,8 @@ function onOpen() {
       .addItem('➕ テストデータを生成', 'generateAllTestData')
       .addItem('🗑️ テストデータをクリア', 'clearAllTestData')
       .addSeparator()
-      .addItem('🔍 データ構造を検証', 'validateAllTestData'))
+      .addItem('🔍 データ構造を検証（列数）', 'validateAllTestData')
+      .addItem('🔬 データ構造を詳細検証', 'validateTestDataStructure'))
     .addSeparator()
     .addItem('🔍 システム状態を確認', 'showSystemStatus') // 【新規追加】
     .addItem('ℹ️ バージョン情報', 'showVersionInfo')
