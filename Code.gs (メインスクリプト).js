@@ -99,7 +99,9 @@ function onOpen() {
     .addSubMenu(ui.createMenu('🧪 テストデータ')
       .addItem('📊 テストデータ状況を確認', 'checkTestDataStatus')
       .addItem('➕ テストデータを生成', 'generateAllTestData')
-      .addItem('🗑️ テストデータをクリア', 'clearAllTestData'))
+      .addItem('🗑️ テストデータをクリア', 'clearAllTestData')
+      .addSeparator()
+      .addItem('🔍 データ構造を検証', 'validateAllTestData'))
     .addSeparator()
     .addItem('🔍 システム状態を確認', 'showSystemStatus') // 【新規追加】
     .addItem('ℹ️ バージョン情報', 'showVersionInfo')
