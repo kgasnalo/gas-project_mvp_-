@@ -176,7 +176,7 @@ function getSurveySendLog(candidateId, phase = null) {
         email: row[CONFIG.COLUMNS.SURVEY_SEND_LOG.EMAIL],
         phase: rowPhase,
         send_time: new Date(row[CONFIG.COLUMNS.SURVEY_SEND_LOG.SEND_TIME]),
-        status: row[CONFIG.COLUMNS.SURVEY_SEND_LOG.STATUS],
+        send_status: row[CONFIG.COLUMNS.SURVEY_SEND_LOG.STATUS],  // ✅ status → send_status に修正
         error_message: row[CONFIG.COLUMNS.SURVEY_SEND_LOG.ERROR_MSG]
       });
     }
