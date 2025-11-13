@@ -18,56 +18,86 @@ function diagnoseTestData() {
     // Survey_Send_Logの診断
     Logger.log('\n【Survey_Send_Log】');
     const sendLogData = sendLogSheet.getDataRange().getValues();
-    Logger.log(`総行数: ${sendLogData.length - 1}件`);
+    Logger.log(`総行数: ${sendLogData.length - 1}件（ヘッダー除く）`);
+    Logger.log(`データ範囲: ${sendLogSheet.getDataRange().getA1Notation()}`);
 
     let sendLogTestCount = 0;
+    let sendLogAllCount = 0;
+
     for (let i = 1; i < sendLogData.length; i++) {
       const sendId = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.SEND_ID];
-      if (sendId && sendId.toString().startsWith('LOG-TEST-')) {
-        sendLogTestCount++;
-        const candidateId = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.CANDIDATE_ID];
-        const phase = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.PHASE];
-        const email = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.EMAIL];
-        const status = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.STATUS];
 
-        Logger.log(`  行${i+1}: ${candidateId} | phase="${phase}" | email="${email}" | status="${status}"`);
+      if (sendId && sendId !== '') {
+        sendLogAllCount++;
 
-        // phaseに@が含まれているかチェック
-        if (phase && phase.toString().includes('@')) {
-          Logger.log(`    ❌ エラー: phaseにメールアドレスが入っています！`);
+        if (sendId.toString().startsWith('LOG-TEST-')) {
+          sendLogTestCount++;
+          const candidateId = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.CANDIDATE_ID];
+          const phase = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.PHASE];
+          const email = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.EMAIL];
+          const status = sendLogData[i][CONFIG.COLUMNS.SURVEY_SEND_LOG.STATUS];
+
+          if (sendLogTestCount <= 5) {  // 最初の5件のみ詳細表示
+            Logger.log(`  行${i+1}: ${candidateId} | phase="${phase}" | email="${email}" | status="${status}"`);
+          }
+
+          // phaseに@が含まれているかチェック
+          if (phase && phase.toString().includes('@')) {
+            Logger.log(`    ❌ エラー: phaseにメールアドレスが入っています！`);
+          }
         }
       }
     }
+    Logger.log(`全データ件数: ${sendLogAllCount}件`);
     Logger.log(`テストデータ件数: ${sendLogTestCount}件`);
+    if (sendLogTestCount === 0) {
+      Logger.log(`⚠️ 警告: テストデータが見つかりません！`);
+      Logger.log(`⚠️ 「➕ テストデータを生成」を実行してください`);
+    }
 
     // Survey_Responseの診断
     Logger.log('\n【Survey_Response】');
     const responseData = responseSheet.getDataRange().getValues();
-    Logger.log(`総行数: ${responseData.length - 1}件`);
+    Logger.log(`総行数: ${responseData.length - 1}件（ヘッダー除く）`);
+    Logger.log(`データ範囲: ${responseSheet.getDataRange().getA1Notation()}`);
 
     let responseTestCount = 0;
+    let responseAllCount = 0;
+
     for (let i = 1; i < responseData.length; i++) {
       const responseId = responseData[i][CONFIG.COLUMNS.SURVEY_RESPONSE.RESPONSE_ID];
-      if (responseId && responseId.toString().startsWith('RESP-TEST-')) {
-        responseTestCount++;
-        const candidateId = responseData[i][CONFIG.COLUMNS.SURVEY_RESPONSE.CANDIDATE_ID];
-        const phase = responseData[i][CONFIG.COLUMNS.SURVEY_RESPONSE.PHASE];
-        const responseDate = responseData[i][CONFIG.COLUMNS.SURVEY_RESPONSE.RESPONSE_DATE];
 
-        Logger.log(`  行${i+1}: ${candidateId} | phase="${phase}" | responseDate="${responseDate}"`);
+      if (responseId && responseId !== '') {
+        responseAllCount++;
 
-        // phaseに@が含まれているかチェック
-        if (phase && phase.toString().includes('@')) {
-          Logger.log(`    ❌ エラー: phaseにメールアドレスが入っています！`);
-        }
+        if (responseId.toString().startsWith('RESP-TEST-')) {
+          responseTestCount++;
+          const candidateId = responseData[i][CONFIG.COLUMNS.SURVEY_RESPONSE.CANDIDATE_ID];
+          const phase = responseData[i][CONFIG.COLUMNS.SURVEY_RESPONSE.PHASE];
+          const responseDate = responseData[i][CONFIG.COLUMNS.SURVEY_RESPONSE.RESPONSE_DATE];
 
-        // phaseがundefinedまたは空かチェック
-        if (!phase || phase === '') {
-          Logger.log(`    ❌ エラー: phaseが空です！`);
+          if (responseTestCount <= 5) {  // 最初の5件のみ詳細表示
+            Logger.log(`  行${i+1}: ${candidateId} | phase="${phase}" | responseDate="${responseDate}"`);
+          }
+
+          // phaseに@が含まれているかチェック
+          if (phase && phase.toString().includes('@')) {
+            Logger.log(`    ❌ エラー: phaseにメールアドレスが入っています！`);
+          }
+
+          // phaseがundefinedまたは空かチェック
+          if (!phase || phase === '') {
+            Logger.log(`    ❌ エラー: phaseが空です！`);
+          }
         }
       }
     }
+    Logger.log(`全データ件数: ${responseAllCount}件`);
     Logger.log(`テストデータ件数: ${responseTestCount}件`);
+    if (responseTestCount === 0) {
+      Logger.log(`⚠️ 警告: テストデータが見つかりません！`);
+      Logger.log(`⚠️ 「➕ テストデータを生成」を実行してください`);
+    }
 
     // データマッチングテスト
     Logger.log('\n【データマッチングテスト】');
