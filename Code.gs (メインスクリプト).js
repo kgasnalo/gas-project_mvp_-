@@ -94,6 +94,7 @@ function onOpen() {
     .addItem('🔄 データ検証を再設定', 'setupAllDataValidation')
     .addItem('🎨 条件付き書式を再設定', 'setupAllConditionalFormatting')
     .addItem('📊 初期データを再投入', 'insertAllInitialData')
+    .addItem('🔍 初期データを検証', 'validateTestData')
     .addSeparator()
     .addItem('📈 回答速度を一括計算', 'calculateAllResponseSpeeds') // 【Phase 2 Step 3追加】
     .addSubMenu(ui.createMenu('🧪 テストデータ')

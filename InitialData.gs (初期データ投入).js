@@ -763,42 +763,43 @@ function insertSampleContactHistoryData() {
 function insertSampleSurveyResponseData() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet()
     .getSheetByName(CONFIG.SHEET_NAMES.SURVEY_RESPONSE);
-  
+
   if (!sheet) return;
-  
+
   const now = new Date();
-  
+
   function addDays(date, days) {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
     return result;
   }
-  
+
   const data = [
     [
       'SURV001', 'C001', '田中太郎', addDays(now, -2), 8,
       '給与水準がやや低い', 'A社（大手コンサル）、B社（メガベンチャー）の最終面接を控えています',
-      '成長環境に魅力を感じています'
+      '成長環境に魅力を感じています', '初回面談' // ✅ I列: アンケート種別を追加
     ],
     [
       'SURV002', 'C002', '佐藤花子', addDays(now, -3), 6,
       '給与が低い、福利厚生が不明確', 'C社（外資系IT）の最終面接が来週です',
-      '働き方には魅力を感じていますが、給与面での不安があります'
+      '働き方には魅力を感じていますが、給与面での不安があります', '社員面談' // ✅ I列: アンケート種別を追加
     ],
     [
       'SURV003', 'C003', '鈴木一郎', addDays(now, -4), 9,
       '特になし', 'B社（メガベンチャー）の選考は辞退しました',
-      '御社が第一志望です。早く内定をいただきたいです'
+      '御社が第一志望です。早く内定をいただきたいです', '2次面接' // ✅ I列: アンケート種別を追加
     ],
     [
       'SURV004', 'C004', '高橋美咲', addDays(now, -5), 5,
       '事業の将来性に不安', 'A社（大手コンサル）、C社（外資系IT）の選考中です',
-      '安定性を重視しています'
+      '安定性を重視しています', '内定後' // ✅ I列: アンケート種別を追加
     ]
   ];
-  
-  sheet.getRange(2, 1, data.length, data[0].length).setValues(data);
-  
+
+  // ✅ 9列のデータを書き込む（8列 → 9列に修正）
+  sheet.getRange(2, 1, data.length, 9).setValues(data);
+
   Logger.log(`✅ Survey_Responseに${data.length}件のサンプルデータを投入しました`);
 }
 
@@ -960,6 +961,132 @@ function insertSampleArchiveData() {
   ];
   
   sheet.getRange(2, 1, data.length, data[0].length).setValues(data);
-  
+
   Logger.log(`✅ Archiveに${data.length}件のサンプルデータを投入しました`);
+}
+
+/**
+ * テストデータのバリデーション
+ * ヘッダー数とデータ列数の一致をチェック
+ *
+ * @return {boolean} バリデーション成功/失敗
+ */
+function validateTestData() {
+  try {
+    Logger.log('\n========================================');
+    Logger.log('テストデータバリデーション開始');
+    Logger.log('========================================');
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const results = [];
+
+    // Survey_Responseのチェック
+    const surveyResponseSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.SURVEY_RESPONSE);
+    if (surveyResponseSheet) {
+      const headers = surveyResponseSheet.getRange(1, 1, 1, surveyResponseSheet.getLastColumn()).getValues()[0];
+      const dataRow = surveyResponseSheet.getRange(2, 1, 1, surveyResponseSheet.getLastColumn()).getValues()[0];
+
+      const headerCount = headers.filter(h => h !== '').length;
+      const dataCount = dataRow.filter(d => d !== '').length;
+
+      Logger.log(`\n【Survey_Response】`);
+      Logger.log(`  ヘッダー数: ${headerCount}列`);
+      Logger.log(`  データ列数: ${dataCount}列`);
+      Logger.log(`  ヘッダー: ${headers.filter(h => h !== '').join(', ')}`);
+
+      if (headerCount !== 9) {
+        results.push(`❌ Survey_Response: ヘッダー数が不正 (期待: 9列, 実際: ${headerCount}列)`);
+        Logger.log(`  ❌ ヘッダー数が不正`);
+      } else {
+        results.push(`✅ Survey_Response: ヘッダー数が正しい (9列)`);
+        Logger.log(`  ✅ ヘッダー数が正しい`);
+      }
+
+      if (dataCount !== 9) {
+        results.push(`❌ Survey_Response: データ列数が不正 (期待: 9列, 実際: ${dataCount}列)`);
+        Logger.log(`  ❌ データ列数が不正`);
+      } else {
+        results.push(`✅ Survey_Response: データ列数が正しい (9列)`);
+        Logger.log(`  ✅ データ列数が正しい`);
+      }
+    } else {
+      results.push(`❌ Survey_Response: シートが見つかりません`);
+    }
+
+    // Survey_Send_Logのチェック
+    const sendLogSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.SURVEY_SEND_LOG);
+    if (sendLogSheet) {
+      const headers = sendLogSheet.getRange(1, 1, 1, sendLogSheet.getLastColumn()).getValues()[0];
+      const dataRow2 = sendLogSheet.getRange(2, 1, 1, sendLogSheet.getLastColumn()).getValues()[0];
+
+      const headerCount = headers.filter(h => h !== '').length;
+      const dataCount = dataRow2.filter(d => d !== '').length;
+
+      Logger.log(`\n【Survey_Send_Log】`);
+      Logger.log(`  ヘッダー数: ${headerCount}列`);
+      Logger.log(`  データ列数: ${dataCount}列`);
+      Logger.log(`  ヘッダー: ${headers.filter(h => h !== '').join(', ')}`);
+
+      if (headerCount !== 8) {
+        results.push(`❌ Survey_Send_Log: ヘッダー数が不正 (期待: 8列, 実際: ${headerCount}列)`);
+        Logger.log(`  ❌ ヘッダー数が不正`);
+      } else {
+        results.push(`✅ Survey_Send_Log: ヘッダー数が正しい (8列)`);
+        Logger.log(`  ✅ ヘッダー数が正しい`);
+      }
+
+      if (dataCount !== 8) {
+        results.push(`❌ Survey_Send_Log: データ列数が不正 (期待: 8列, 実際: ${dataCount}列)`);
+        Logger.log(`  ❌ データ列数が不正`);
+      } else {
+        results.push(`✅ Survey_Send_Log: データ列数が正しい (8列)`);
+        Logger.log(`  ✅ データ列数が正しい`);
+      }
+    } else {
+      results.push(`❌ Survey_Send_Log: シートが見つかりません`);
+    }
+
+    Logger.log('\n========================================');
+    Logger.log('バリデーション結果');
+    Logger.log('========================================');
+    results.forEach(r => Logger.log(r));
+    Logger.log('========================================\n');
+
+    // エラーがあればアラート表示
+    const errors = results.filter(r => r.startsWith('❌'));
+    if (errors.length > 0) {
+      const message = '【⚠️ テストデータにエラーがあります】\n\n' +
+        errors.join('\n') +
+        '\n\nInitialData.gsまたはTestDataGenerator.gsを修正してください。';
+
+      SpreadsheetApp.getUi().alert(
+        'テストデータ検証エラー',
+        message,
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+      return false;
+    }
+
+    const message = '【✅ テストデータが正常です】\n\n' +
+      results.join('\n') +
+      '\n\n全てのバリデーションチェックに合格しました。';
+
+    SpreadsheetApp.getUi().alert(
+      'テストデータ検証成功',
+      message,
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    return true;
+
+  } catch (error) {
+    Logger.log(`❌ validateTestDataエラー: ${error.message}`);
+    Logger.log(error.stack);
+
+    SpreadsheetApp.getUi().alert(
+      'エラー',
+      `バリデーション中にエラーが発生しました:\n${error.message}`,
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    return false;
+  }
 }
