@@ -25,7 +25,7 @@ function setupCandidatesMaster() {
   try {
     const sheet = getOrCreateSheet(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
     
-    // ヘッダー行の定義（AQ列まで）
+    // ヘッダー行の定義（A-BE列：57列）
     const headers = [
       // 基本情報 A-G列
       'candidate_id', '氏名', '現在ステータス', '最終更新日時', '採用区分', '担当面接官', '応募日',
@@ -60,7 +60,7 @@ function setupCandidatesMaster() {
       '1次面接日', '1次面接結果',
       '社員面談実施回数', '社員面談日（最終）', '社員面談実施ステータス',
       '2次面接日', '2次面接結果',
-      '最終面接日', '最終面接結果',
+      '最終面接日', '最終面接実施ステータス',
 
       // 【Phase 2 Step 2追加】アンケート回答速度スコア BE列
       'アンケート回答速度スコア'
@@ -167,6 +167,9 @@ function setupCandidatesMaster() {
     // データ検証が設定されているとエラーになるのでクリアする
     sheet.getRange('U2:U1000').clearDataValidations();
     sheet.getRange('AL2:AL1000').clearDataValidations();
+
+    // BE列（アンケート回答速度スコア）は数値入力列のため、プルダウンをクリア
+    sheet.getRange('BE2:BE1000').clearDataValidations();
 
     // ========== 自動計算列の関数設定 ==========
     // ⚠️ Evaluation_Logの範囲をA:S（T列追加に対応）に修正
