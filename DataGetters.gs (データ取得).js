@@ -328,3 +328,49 @@ function getResponseSpeedData(candidateId, phase) {
     return null;
   }
 }
+
+/**
+ * 候補者のメールアドレスを取得
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {string|null} メールアドレス
+ *
+ * 使用例:
+ * const email = getCandidateEmail('C001');
+ * // → 'tanaka@example.com'
+ */
+function getCandidateEmail(candidateId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const master = ss.getSheetByName(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
+
+    if (!master) {
+      Logger.log('❌ Candidates_Masterシートが見つかりません');
+      return null;
+    }
+
+    const data = master.getDataRange().getValues();
+
+    // ヘッダー行をスキップ（i=1から開始）
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][CONFIG.COLUMNS.CANDIDATES_MASTER.CANDIDATE_ID] === candidateId) {
+        const email = data[i][CONFIG.COLUMNS.CANDIDATES_MASTER.EMAIL];
+
+        if (!email || email === '') {
+          Logger.log(`⚠️ メールアドレスが空です: ${candidateId}`);
+          return null;
+        }
+
+        Logger.log(`✅ メールアドレス取得: ${candidateId} → ${email}`);
+        return email;
+      }
+    }
+
+    Logger.log(`❌ 候補者が見つかりません: ${candidateId}`);
+    return null;
+
+  } catch (error) {
+    Logger.log(`❌ メールアドレス取得エラー: ${error}`);
+    return null;
+  }
+}
