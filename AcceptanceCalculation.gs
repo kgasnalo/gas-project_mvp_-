@@ -1167,3 +1167,492 @@ function calculateFoundationScore(candidateId, phase) {
     return DEFAULT_SCORES.FOUNDATION;
   }
 }
+
+/**
+ * ========================================
+ * Phase 3-2: 関係性・行動シグナル要素スコア計算
+ * ========================================
+ */
+
+// Phase 3-2のデフォルト値
+const DEFAULT_SCORES_PHASE3_2 = {
+  RELATIONSHIP: 70,          // 関係性要素スコア
+  CONTACT_COUNT: 50,         // 接点回数スコア
+  INTERVAL: 70,              // 接点間隔スコア
+  QUALITY: 70,               // 接点の質スコア
+  GAP: 70,                   // 空白期間スコア
+  BEHAVIOR: 70,              // 行動シグナル要素スコア
+  DESCRIPTION: 70,           // 自由記述スコア
+  SELECTION_SPEED: 80,       // 選考スピードスコア
+  RESPONSE_SPEED: 70,        // 回答速度スコア
+  PROACTIVITY: 70            // 積極性スコア
+};
+
+// 接点回数のスコアリング基準
+const CONTACT_COUNT_SCORING = {
+  ZERO: 0,
+  LOW: 30,       // 1-2回
+  MEDIUM: 50,    // 3-4回
+  HIGH: 70,      // 5-6回
+  VERY_HIGH: 85, // 7-9回
+  EXCELLENT: 100 // 10回以上
+};
+
+// 接点間隔のスコアリング基準（日数）
+const INTERVAL_SCORING = {
+  WEEKLY: { days: 7, score: 100 },       // 週1回以上
+  BIWEEKLY: { days: 14, score: 80 },     // 2週間に1回
+  TRIWEEKLY: { days: 21, score: 60 },    // 3週間に1回
+  MONTHLY: { days: 30, score: 40 },      // 月1回
+  RARE: { days: 31, score: 20 }          // 月1回未満
+};
+
+// 空白期間のスコアリング基準（日数）
+const GAP_SCORING = {
+  RECENT: { days: 7, score: 100 },       // 1週間以内
+  FAIRLY_RECENT: { days: 14, score: 80 }, // 2週間以内
+  MODERATE: { days: 21, score: 60 },     // 3週間以内
+  OLD: { days: 30, score: 40 },          // 1ヶ月以内
+  VERY_OLD: { days: 31, score: 20 }      // 1ヶ月以上
+};
+
+// 志望度変化のスコアリング基準
+const MOTIVATION_CHANGE_SCORING = {
+  LARGE_INCREASE: { change: 2, score: 100 },    // 大きく上昇
+  INCREASE: { change: 1, score: 90 },           // 上昇
+  STABLE: { change: 0, score: 80 },             // 維持
+  SLIGHT_DECREASE: { change: -1, score: 60 },   // 微減
+  DECREASE: { change: -2, score: 40 }           // 大きく下降
+};
+
+// 自由記述のスコアリング基準（文字数）
+const DESCRIPTION_SCORING = {
+  NONE: { length: 0, score: 0 },
+  VERY_SHORT: { length: 20, score: 20 },   // ほとんど書いていない
+  SHORT: { length: 50, score: 40 },        // 短い
+  MEDIUM: { length: 100, score: 60 },      // 普通
+  LONG: { length: 200, score: 80 },        // 詳しい
+  VERY_LONG: { length: 201, score: 100 }   // 非常に詳しい
+};
+
+// 選考スピードのスコアリング基準（日数）
+const SELECTION_SPEED_SCORING = {
+  VERY_FAST: { days: 14, score: 100 },     // 2週間以内
+  FAST: { days: 30, score: 90 },           // 1ヶ月以内
+  NORMAL: { days: 60, score: 80 },         // 2ヶ月以内
+  SLOW: { days: 90, score: 60 },           // 3ヶ月以内
+  VERY_SLOW: { days: 91, score: 40 }       // 3ヶ月以上
+};
+
+/**
+ * ========================================
+ * Phase 3-2: 関係性要素の計算関数
+ * ========================================
+ */
+
+/**
+ * 関係性要素スコアの計算（統合）
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {number} 関係性要素スコア（0-100点）
+ *
+ * 計算式:
+ * 関係性要素 = 接点回数(30%) + 接点間隔(20%) + 接点の質(25%) + 空白期間(25%)
+ */
+function calculateRelationshipScore(candidateId) {
+  try {
+    Logger.log(`\n========================================`);
+    Logger.log(`関係性要素スコア計算: ${candidateId}`);
+    Logger.log(`========================================`);
+
+    const contactCountScore = calculateContactCountScore(candidateId);
+    const intervalScore = calculateIntervalScore(candidateId);
+    const qualityScore = calculateQualityScore(candidateId);
+    const gapScore = calculateGapScore(candidateId);
+
+    const relationshipScore =
+      contactCountScore * 0.3 +
+      intervalScore * 0.2 +
+      qualityScore * 0.25 +
+      gapScore * 0.25;
+
+    Logger.log(`\n--- 関係性要素スコア内訳 ---`);
+    Logger.log(`接点回数スコア: ${contactCountScore} × 0.3 = ${(contactCountScore * 0.3).toFixed(1)}`);
+    Logger.log(`接点間隔スコア: ${intervalScore} × 0.2 = ${(intervalScore * 0.2).toFixed(1)}`);
+    Logger.log(`接点の質スコア: ${qualityScore} × 0.25 = ${(qualityScore * 0.25).toFixed(1)}`);
+    Logger.log(`空白期間スコア: ${gapScore} × 0.25 = ${(gapScore * 0.25).toFixed(1)}`);
+    Logger.log(`関係性要素スコア（合計）: ${relationshipScore.toFixed(1)}`);
+    Logger.log(`========================================\n`);
+
+    return Math.round(relationshipScore);
+
+  } catch (error) {
+    Logger.log(`❌ 関係性要素スコアエラー: ${error}`);
+    return DEFAULT_SCORES_PHASE3_2.RELATIONSHIP;
+  }
+}
+
+/**
+ * 接点回数スコアの計算
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {number} 接点回数スコア（0-100点）
+ *
+ * スコアリング基準:
+ * 0回: 0点
+ * 1-2回: 30点
+ * 3-4回: 50点
+ * 5-6回: 70点
+ * 7-9回: 85点
+ * 10回以上: 100点
+ */
+function calculateContactCountScore(candidateId) {
+  try {
+    const contacts = getContactHistory(candidateId);
+    const count = contacts.length;
+
+    let score;
+    if (count === 0) {
+      score = CONTACT_COUNT_SCORING.ZERO;
+    } else if (count <= 2) {
+      score = CONTACT_COUNT_SCORING.LOW;
+    } else if (count <= 4) {
+      score = CONTACT_COUNT_SCORING.MEDIUM;
+    } else if (count <= 6) {
+      score = CONTACT_COUNT_SCORING.HIGH;
+    } else if (count <= 9) {
+      score = CONTACT_COUNT_SCORING.VERY_HIGH;
+    } else {
+      score = CONTACT_COUNT_SCORING.EXCELLENT;
+    }
+
+    Logger.log(`✅ 接点回数: ${count}回 → スコア: ${score}点`);
+    return score;
+
+  } catch (error) {
+    Logger.log(`❌ 接点回数スコアエラー: ${error}`);
+    return DEFAULT_SCORES_PHASE3_2.CONTACT_COUNT;
+  }
+}
+
+/**
+ * 接点間隔スコアの計算
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {number} 接点間隔スコア（0-100点）
+ *
+ * スコアリング基準（平均接点間隔）:
+ * 0-7日: 100点（週1回以上）
+ * 8-14日: 80点（2週間に1回）
+ * 15-21日: 60点（3週間に1回）
+ * 22-30日: 40点（月1回）
+ * 31日以上: 20点（月1回未満）
+ */
+function calculateIntervalScore(candidateId) {
+  try {
+    const avgInterval = getAverageInterval(candidateId);
+
+    if (avgInterval === 0) {
+      Logger.log(`⚠️ 接点間隔データなし: ${candidateId} → デフォルト値`);
+      return DEFAULT_SCORES_PHASE3_2.INTERVAL;
+    }
+
+    let score;
+    if (avgInterval <= INTERVAL_SCORING.WEEKLY.days) {
+      score = INTERVAL_SCORING.WEEKLY.score;
+    } else if (avgInterval <= INTERVAL_SCORING.BIWEEKLY.days) {
+      score = INTERVAL_SCORING.BIWEEKLY.score;
+    } else if (avgInterval <= INTERVAL_SCORING.TRIWEEKLY.days) {
+      score = INTERVAL_SCORING.TRIWEEKLY.score;
+    } else if (avgInterval <= INTERVAL_SCORING.MONTHLY.days) {
+      score = INTERVAL_SCORING.MONTHLY.score;
+    } else {
+      score = INTERVAL_SCORING.RARE.score;
+    }
+
+    Logger.log(`✅ 平均接点間隔: ${avgInterval.toFixed(1)}日 → スコア: ${score}点`);
+    return score;
+
+  } catch (error) {
+    Logger.log(`❌ 接点間隔スコアエラー: ${error}`);
+    return DEFAULT_SCORES_PHASE3_2.INTERVAL;
+  }
+}
+
+/**
+ * 接点の質スコアの計算
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {number} 接点の質スコア（0-100点）
+ *
+ * 計算方法:
+ * - 各アンケートの志望度の推移から計算
+ * - 初回→社員→2次→内定の志望度変化を分析
+ * - 上昇傾向: 高スコア
+ * - 維持: 中スコア
+ * - 下降傾向: 低スコア
+ */
+function calculateQualityScore(candidateId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const email = getCandidateEmail(candidateId);
+
+    if (!email) {
+      Logger.log(`❌ メールアドレスなし: ${candidateId}`);
+      return DEFAULT_SCORES_PHASE3_2.QUALITY;
+    }
+
+    const phases = [
+      { name: '初回面談', sheet: 'アンケート_初回面談', column: 'F' },
+      { name: '社員面談', sheet: 'アンケート_社員面談', column: 'F' },
+      { name: '2次面接', sheet: 'アンケート_2次面接', column: 'F' },
+      { name: '内定後', sheet: 'アンケート_内定', column: 'H' }
+    ];
+
+    const motivationScores = [];
+
+    for (let phase of phases) {
+      const sheet = ss.getSheetByName(phase.sheet);
+      if (!sheet) continue;
+
+      const data = sheet.getDataRange().getValues();
+
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][2] === email) { // C列: メールアドレス
+          const colIndex = phase.column.charCodeAt(0) - 65;
+          const score = data[i][colIndex];
+
+          if (score && typeof score === 'number') {
+            motivationScores.push(score);
+          }
+          break;
+        }
+      }
+    }
+
+    if (motivationScores.length < 2) {
+      Logger.log(`⚠️ 志望度データ不足: ${candidateId} → デフォルト値`);
+      return DEFAULT_SCORES_PHASE3_2.QUALITY;
+    }
+
+    // 志望度の変化を計算
+    let totalChange = 0;
+    for (let i = 1; i < motivationScores.length; i++) {
+      totalChange += (motivationScores[i] - motivationScores[i - 1]);
+    }
+
+    const avgChange = totalChange / (motivationScores.length - 1);
+
+    // スコアリング
+    let score;
+    if (avgChange >= MOTIVATION_CHANGE_SCORING.LARGE_INCREASE.change) {
+      score = MOTIVATION_CHANGE_SCORING.LARGE_INCREASE.score;
+    } else if (avgChange >= MOTIVATION_CHANGE_SCORING.INCREASE.change) {
+      score = MOTIVATION_CHANGE_SCORING.INCREASE.score;
+    } else if (avgChange >= MOTIVATION_CHANGE_SCORING.STABLE.change) {
+      score = MOTIVATION_CHANGE_SCORING.STABLE.score;
+    } else if (avgChange >= MOTIVATION_CHANGE_SCORING.SLIGHT_DECREASE.change) {
+      score = MOTIVATION_CHANGE_SCORING.SLIGHT_DECREASE.score;
+    } else {
+      score = MOTIVATION_CHANGE_SCORING.DECREASE.score;
+    }
+
+    Logger.log(`✅ 志望度推移: ${motivationScores.join(' → ')} (平均変化: ${avgChange.toFixed(1)}) → スコア: ${score}点`);
+    return score;
+
+  } catch (error) {
+    Logger.log(`❌ 接点の質スコアエラー: ${error}`);
+    return DEFAULT_SCORES_PHASE3_2.QUALITY;
+  }
+}
+
+/**
+ * 空白期間スコアの計算
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {number} 空白期間スコア（0-100点）
+ *
+ * スコアリング基準（最新接点からの経過日数）:
+ * 0-7日: 100点
+ * 8-14日: 80点
+ * 15-21日: 60点
+ * 22-30日: 40点
+ * 31日以上: 20点
+ */
+function calculateGapScore(candidateId) {
+  try {
+    const latestContact = getLatestContactDate(candidateId);
+
+    if (!latestContact) {
+      Logger.log(`⚠️ 接点履歴なし: ${candidateId} → デフォルト値`);
+      return DEFAULT_SCORES_PHASE3_2.GAP;
+    }
+
+    const now = new Date();
+    const gapDays = (now - latestContact) / (1000 * 60 * 60 * 24);
+
+    let score;
+    if (gapDays <= GAP_SCORING.RECENT.days) {
+      score = GAP_SCORING.RECENT.score;
+    } else if (gapDays <= GAP_SCORING.FAIRLY_RECENT.days) {
+      score = GAP_SCORING.FAIRLY_RECENT.score;
+    } else if (gapDays <= GAP_SCORING.MODERATE.days) {
+      score = GAP_SCORING.MODERATE.score;
+    } else if (gapDays <= GAP_SCORING.OLD.days) {
+      score = GAP_SCORING.OLD.score;
+    } else {
+      score = GAP_SCORING.VERY_OLD.score;
+    }
+
+    Logger.log(`✅ 空白期間: ${gapDays.toFixed(1)}日 → スコア: ${score}点`);
+    return score;
+
+  } catch (error) {
+    Logger.log(`❌ 空白期間スコアエラー: ${error}`);
+    return DEFAULT_SCORES_PHASE3_2.GAP;
+  }
+}
+
+/**
+ * ========================================
+ * Phase 3-2: 行動シグナル要素の計算関数
+ * ========================================
+ */
+
+/**
+ * 行動シグナル要素スコアの計算（統合）
+ *
+ * @param {string} candidateId - 候補者ID
+ * @param {string} phase - アンケート種別
+ * @return {number} 行動シグナル要素スコア（0-100点）
+ *
+ * 計算式:
+ * 行動シグナル = 回答速度(30%) + 自由記述(20%) + 選考スピード(25%) + 積極性(25%)
+ */
+function calculateBehaviorScore(candidateId, phase) {
+  try {
+    Logger.log(`\n========================================`);
+    Logger.log(`行動シグナル要素スコア計算: ${candidateId}, ${phase}`);
+    Logger.log(`========================================`);
+
+    // 回答速度スコア（既存のSurvey_Analysisから取得）
+    const responseSpeedScore = getAverageResponseSpeedScore(candidateId) || DEFAULT_SCORES_PHASE3_2.RESPONSE_SPEED;
+
+    // 自由記述スコア
+    const descriptionScore = calculateDescriptionScore(candidateId, phase);
+
+    // 選考スピードスコア
+    const selectionSpeedScore = calculateSelectionSpeedScore(candidateId);
+
+    // 積極性スコア（既存のEvaluation_LogのT列から取得）
+    const proactivityScore = getProactivityScore(candidateId, phase) || DEFAULT_SCORES_PHASE3_2.PROACTIVITY;
+
+    const behaviorScore =
+      responseSpeedScore * 0.3 +
+      descriptionScore * 0.2 +
+      selectionSpeedScore * 0.25 +
+      proactivityScore * 0.25;
+
+    Logger.log(`\n--- 行動シグナル要素スコア内訳 ---`);
+    Logger.log(`回答速度スコア: ${responseSpeedScore} × 0.3 = ${(responseSpeedScore * 0.3).toFixed(1)}`);
+    Logger.log(`自由記述スコア: ${descriptionScore} × 0.2 = ${(descriptionScore * 0.2).toFixed(1)}`);
+    Logger.log(`選考スピードスコア: ${selectionSpeedScore} × 0.25 = ${(selectionSpeedScore * 0.25).toFixed(1)}`);
+    Logger.log(`積極性スコア: ${proactivityScore} × 0.25 = ${(proactivityScore * 0.25).toFixed(1)}`);
+    Logger.log(`行動シグナル要素スコア（合計）: ${behaviorScore.toFixed(1)}`);
+    Logger.log(`========================================\n`);
+
+    return Math.round(behaviorScore);
+
+  } catch (error) {
+    Logger.log(`❌ 行動シグナル要素スコアエラー: ${error}`);
+    return DEFAULT_SCORES_PHASE3_2.BEHAVIOR;
+  }
+}
+
+/**
+ * 自由記述スコアの計算
+ *
+ * @param {string} candidateId - 候補者ID
+ * @param {string} phase - アンケート種別
+ * @return {number} 自由記述スコア（0-100点）
+ *
+ * スコアリング基準（文字数）:
+ * 0文字: 0点
+ * 1-20文字: 20点（ほとんど書いていない）
+ * 21-50文字: 40点（短い）
+ * 51-100文字: 60点（普通）
+ * 101-200文字: 80点（詳しい）
+ * 201文字以上: 100点（非常に詳しい）
+ */
+function calculateDescriptionScore(candidateId, phase) {
+  try {
+    const freeText = getFreeTextResponses(candidateId, phase);
+    const length = freeText.length;
+
+    let score;
+    if (length === DESCRIPTION_SCORING.NONE.length) {
+      score = DESCRIPTION_SCORING.NONE.score;
+    } else if (length <= DESCRIPTION_SCORING.VERY_SHORT.length) {
+      score = DESCRIPTION_SCORING.VERY_SHORT.score;
+    } else if (length <= DESCRIPTION_SCORING.SHORT.length) {
+      score = DESCRIPTION_SCORING.SHORT.score;
+    } else if (length <= DESCRIPTION_SCORING.MEDIUM.length) {
+      score = DESCRIPTION_SCORING.MEDIUM.score;
+    } else if (length <= DESCRIPTION_SCORING.LONG.length) {
+      score = DESCRIPTION_SCORING.LONG.score;
+    } else {
+      score = DESCRIPTION_SCORING.VERY_LONG.score;
+    }
+
+    Logger.log(`✅ 自由記述: ${length}文字 → スコア: ${score}点`);
+    return score;
+
+  } catch (error) {
+    Logger.log(`❌ 自由記述スコアエラー: ${error}`);
+    return DEFAULT_SCORES_PHASE3_2.DESCRIPTION;
+  }
+}
+
+/**
+ * 選考スピードスコアの計算
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {number} 選考スピードスコア（0-100点）
+ *
+ * スコアリング基準（応募から現在までの日数）:
+ * 0-14日: 100点（非常に速い）
+ * 15-30日: 90点（速い）
+ * 31-60日: 80点（普通）
+ * 61-90日: 60点（やや遅い）
+ * 91日以上: 40点（遅い）
+ */
+function calculateSelectionSpeedScore(candidateId) {
+  try {
+    const duration = getSelectionDuration(candidateId);
+
+    if (duration === 0) {
+      Logger.log(`⚠️ 選考期間データなし: ${candidateId} → デフォルト値`);
+      return DEFAULT_SCORES_PHASE3_2.SELECTION_SPEED;
+    }
+
+    let score;
+    if (duration <= SELECTION_SPEED_SCORING.VERY_FAST.days) {
+      score = SELECTION_SPEED_SCORING.VERY_FAST.score;
+    } else if (duration <= SELECTION_SPEED_SCORING.FAST.days) {
+      score = SELECTION_SPEED_SCORING.FAST.score;
+    } else if (duration <= SELECTION_SPEED_SCORING.NORMAL.days) {
+      score = SELECTION_SPEED_SCORING.NORMAL.score;
+    } else if (duration <= SELECTION_SPEED_SCORING.SLOW.days) {
+      score = SELECTION_SPEED_SCORING.SLOW.score;
+    } else {
+      score = SELECTION_SPEED_SCORING.VERY_SLOW.score;
+    }
+
+    Logger.log(`✅ 選考期間: ${duration.toFixed(1)}日 → スコア: ${score}点`);
+    return score;
+
+  } catch (error) {
+    Logger.log(`❌ 選考スピードスコアエラー: ${error}`);
+    return DEFAULT_SCORES_PHASE3_2.SELECTION_SPEED;
+  }
+}
