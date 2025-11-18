@@ -374,3 +374,291 @@ function getCandidateEmail(candidateId) {
     return null;
   }
 }
+
+/**
+ * 積極性スコアを取得
+ *
+ * @param {string} candidateId - 候補者ID
+ * @param {string} phase - アンケート種別
+ * @return {number} 積極性スコア（0-100点）、データがない場合は70
+ *
+ * データ取得元:
+ * - Evaluation_LogのT列（PROACTIVITY_SCORE）
+ */
+function getProactivityScore(candidateId, phase) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const evalLog = ss.getSheetByName(CONFIG.SHEET_NAMES.EVALUATION_LOG);
+
+    if (!evalLog) {
+      Logger.log('⚠️ Evaluation_Logシートが見つかりません');
+      return 70; // デフォルト値
+    }
+
+    const data = evalLog.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][CONFIG.COLUMNS.EVALUATION_LOG.CANDIDATE_ID] === candidateId &&
+          data[i][CONFIG.COLUMNS.EVALUATION_LOG.PHASE] === phase) {
+        const score = data[i][CONFIG.COLUMNS.EVALUATION_LOG.PROACTIVITY_SCORE];
+
+        if (score && typeof score === 'number') {
+          Logger.log(`✅ 積極性スコア取得: ${candidateId}, ${phase} → ${score}`);
+          return score;
+        }
+      }
+    }
+
+    Logger.log(`⚠️ 積極性スコアデータなし: ${candidateId}, ${phase} → デフォルト値`);
+    return 70; // デフォルト値
+
+  } catch (error) {
+    Logger.log(`❌ 積極性スコア取得エラー: ${error}`);
+    return 70;
+  }
+}
+
+/**
+ * ========================================
+ * Phase 3-2: ヘルパー関数
+ * ========================================
+ */
+
+/**
+ * 接点履歴を取得
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {Array<Object>} 接点履歴の配列
+ *
+ * 返り値の形式:
+ * [{
+ *   date: Date,
+ *   type: string,
+ *   phase: string
+ * }, ...]
+ */
+function getContactHistory(candidateId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const contactSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.CONTACT_HISTORY);
+
+    if (!contactSheet) {
+      Logger.log('❌ Contact_Historyシートが見つかりません');
+      return [];
+    }
+
+    const data = contactSheet.getDataRange().getValues();
+    const contacts = [];
+
+    // ヘッダー行をスキップ（i=1から開始）
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][1] === candidateId) { // B列: candidate_id（インデックス1）
+        const contactDate = data[i][3];  // D列: contact_date（インデックス3）
+        const contactType = data[i][5];  // F列: contact_type（インデックス5）
+        const contactPhase = data[i][4] || ''; // E列: phase（インデックス4）
+
+        // 日付の型チェック
+        if (contactDate) {
+          contacts.push({
+            date: new Date(contactDate),
+            type: contactType,
+            phase: contactPhase
+          });
+        }
+      }
+    }
+
+    // 日付順にソート（古い順）
+    contacts.sort((a, b) => a.date - b.date);
+
+    Logger.log(`✅ 接点履歴取得: ${candidateId} → ${contacts.length}件`);
+    return contacts;
+
+  } catch (error) {
+    Logger.log(`❌ 接点履歴取得エラー: ${error}`);
+    return [];
+  }
+}
+
+/**
+ * 最新接点日を取得
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {Date|null} 最新接点日
+ */
+function getLatestContactDate(candidateId) {
+  try {
+    const contacts = getContactHistory(candidateId);
+
+    if (contacts.length === 0) {
+      Logger.log(`⚠️ 接点履歴なし: ${candidateId}`);
+      return null;
+    }
+
+    // 最後の接点日（最新）
+    const latestDate = contacts[contacts.length - 1].date;
+
+    Logger.log(`✅ 最新接点日: ${candidateId} → ${latestDate.toISOString().split('T')[0]}`);
+    return latestDate;
+
+  } catch (error) {
+    Logger.log(`❌ 最新接点日取得エラー: ${error}`);
+    return null;
+  }
+}
+
+/**
+ * 平均接点間隔を取得（日数）
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {number} 平均接点間隔（日数）
+ */
+function getAverageInterval(candidateId) {
+  try {
+    const contacts = getContactHistory(candidateId);
+
+    if (contacts.length < 2) {
+      Logger.log(`⚠️ 接点が1回以下: ${candidateId}`);
+      return 0; // 接点が1回以下の場合
+    }
+
+    let totalInterval = 0;
+
+    for (let i = 1; i < contacts.length; i++) {
+      const interval = (contacts[i].date - contacts[i - 1].date) / (1000 * 60 * 60 * 24); // ミリ秒→日数
+      totalInterval += interval;
+    }
+
+    const avgInterval = totalInterval / (contacts.length - 1);
+
+    Logger.log(`✅ 平均接点間隔: ${candidateId} → ${avgInterval.toFixed(1)}日`);
+    return avgInterval;
+
+  } catch (error) {
+    Logger.log(`❌ 平均接点間隔取得エラー: ${error}`);
+    return 0;
+  }
+}
+
+/**
+ * 選考期間を取得（応募日から現在まで）
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {number} 選考期間（日数）
+ */
+function getSelectionDuration(candidateId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const master = ss.getSheetByName(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
+
+    if (!master) {
+      Logger.log('❌ Candidates_Masterシートが見つかりません');
+      return 0;
+    }
+
+    const data = master.getDataRange().getValues();
+
+    // ヘッダー行をスキップ（i=1から開始）
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === candidateId) { // A列: candidate_id
+        const applicationDate = data[i][6]; // G列: 応募日（インデックス6）
+
+        if (!applicationDate) {
+          Logger.log(`⚠️ 応募日が空です: ${candidateId}`);
+          return 0;
+        }
+
+        const appDate = new Date(applicationDate);
+        const now = new Date();
+        const duration = (now - appDate) / (1000 * 60 * 60 * 24); // 日数
+
+        Logger.log(`✅ 選考期間: ${candidateId} → ${duration.toFixed(1)}日`);
+        return duration;
+      }
+    }
+
+    Logger.log(`❌ 候補者が見つかりません: ${candidateId}`);
+    return 0;
+
+  } catch (error) {
+    Logger.log(`❌ 選考期間取得エラー: ${error}`);
+    return 0;
+  }
+}
+
+/**
+ * 自由記述を取得
+ *
+ * @param {string} candidateId - 候補者ID
+ * @param {string} phase - アンケート種別
+ * @return {string} 自由記述のテキスト
+ */
+function getFreeTextResponses(candidateId, phase) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const email = getCandidateEmail(candidateId);
+
+    if (!email) {
+      Logger.log(`❌ メールアドレスなし: ${candidateId}`);
+      return '';
+    }
+
+    let sheetName, columns;
+    switch(phase) {
+      case '初回面談':
+        sheetName = 'アンケート_初回面談';
+        columns = ['M', 'N']; // Q12, Q13（自由記述）
+        break;
+      case '社員面談':
+        sheetName = 'アンケート_社員面談';
+        columns = ['O', 'P', 'Q']; // Q15, Q16, Q17
+        break;
+      case '2次面接':
+        sheetName = 'アンケート_2次面接';
+        columns = ['N', 'O', 'P', 'Q', 'R']; // Q11-Q15
+        break;
+      case '内定後':
+        sheetName = 'アンケート_内定';
+        columns = ['N', 'O', 'P', 'R', 'S', 'T']; // Q13-Q15, Q17-Q19
+        break;
+      default:
+        Logger.log(`⚠️ 不明なフェーズ: ${phase}`);
+        return '';
+    }
+
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      Logger.log(`❌ シートが見つかりません: ${sheetName}`);
+      return '';
+    }
+
+    const data = sheet.getDataRange().getValues();
+
+    // ヘッダー行をスキップ（i=1から開始）
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][2] === email) { // C列: メールアドレス
+        let allText = '';
+
+        for (let col of columns) {
+          const colIndex = col.charCodeAt(0) - 65;
+          const text = String(data[i][colIndex]);
+
+          if (text && text !== '' && text !== 'undefined' && text !== 'null') {
+            allText += text + ' ';
+          }
+        }
+
+        const trimmedText = allText.trim();
+        Logger.log(`✅ 自由記述取得: ${candidateId}, ${phase} → ${trimmedText.length}文字`);
+        return trimmedText;
+      }
+    }
+
+    Logger.log(`⚠️ アンケート回答なし: ${candidateId}, ${phase}`);
+    return '';
+
+  } catch (error) {
+    Logger.log(`❌ 自由記述取得エラー: ${error}`);
+    return '';
+  }
+}
