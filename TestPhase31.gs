@@ -132,3 +132,49 @@ function testAllFoundationScores() {
 
   Logger.log(`========================================\n`);
 }
+
+/**
+ * アンケートシートのデータ確認
+ *
+ * 各アンケートシートに存在するデータを確認する
+ */
+function checkSurveyData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = [
+    'アンケート_初回面談',
+    'アンケート_社員面談',
+    'アンケート_2次面接',
+    'アンケート_内定'
+  ];
+
+  Logger.log('\n========================================');
+  Logger.log('アンケートシートのデータ確認');
+  Logger.log('========================================\n');
+
+  for (let sheetName of sheets) {
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      Logger.log(`❌ ${sheetName}: シートが見つかりません`);
+      continue;
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const rowCount = data.length - 1; // ヘッダー除く
+
+    Logger.log(`\n📊 ${sheetName}`);
+    Logger.log(`   データ件数: ${rowCount}件`);
+
+    if (rowCount > 0) {
+      Logger.log(`   データ一覧:`);
+      for (let i = 1; i < data.length; i++) {
+        const email = data[i][2]; // C列: メールアドレス
+        const timestamp = data[i][0]; // A列: タイムスタンプ
+        Logger.log(`     - ${i}行目: ${email} (${timestamp})`);
+      }
+    } else {
+      Logger.log(`   ⚠️ データなし`);
+    }
+  }
+
+  Logger.log('\n========================================\n');
+}
