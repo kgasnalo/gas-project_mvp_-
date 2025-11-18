@@ -434,7 +434,7 @@ function getProactivityScore(candidateId, phase) {
  * [{
  *   date: Date,
  *   type: string,
- *   phase: string
+ *   assignee: string
  * }, ...]
  */
 function getContactHistory(candidateId) {
@@ -453,16 +453,16 @@ function getContactHistory(candidateId) {
     // ヘッダー行をスキップ（i=1から開始）
     for (let i = 1; i < data.length; i++) {
       if (data[i][1] === candidateId) { // B列: candidate_id（インデックス1）
-        const contactDate = data[i][3];  // D列: contact_date（インデックス3）
-        const contactType = data[i][5];  // F列: contact_type（インデックス5）
-        const contactPhase = data[i][4] || ''; // E列: phase（インデックス4）
+        const contactDate = data[i][3];  // D列: 接点日時（インデックス3）
+        const contactType = data[i][4];  // E列: 接点タイプ（インデックス4）← 修正
+        const assignee = data[i][5];     // F列: 担当者（インデックス5）← 追加
 
         // 日付の型チェック
         if (contactDate) {
           contacts.push({
             date: new Date(contactDate),
             type: contactType,
-            phase: contactPhase
+            assignee: assignee
           });
         }
       }
