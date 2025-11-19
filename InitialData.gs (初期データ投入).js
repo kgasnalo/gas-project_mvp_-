@@ -1111,11 +1111,14 @@ function insertContactHistoryData() {
       return;
     }
 
-    // 既存データをクリア（ヘッダー行以外）
+    // 既存データを完全にクリア（ヘッダー行以外）
     const lastRow = sheet.getLastRow();
     if (lastRow > 1) {
-      sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+      // clear()を使って、内容とフォーマットの両方をクリア
+      sheet.getRange(2, 1, lastRow - 1, 8).clear();
     }
+
+    Logger.log(`既存データをクリアしました（${lastRow - 1}行）`);
 
     const testData = [];
 
