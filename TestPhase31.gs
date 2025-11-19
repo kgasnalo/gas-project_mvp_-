@@ -187,42 +187,48 @@ function debugContactHistory() {
   Logger.log('Contact_History シートの構造確認');
   Logger.log('========================================\n');
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(CONFIG.SHEET_NAMES.CONTACT_HISTORY);
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.SHEET_NAMES.CONTACT_HISTORY);
 
-  if (!sheet) {
-    Logger.log('❌ Contact_Historyシートが見つかりません');
-    return;
-  }
+    if (!sheet) {
+      Logger.log('❌ Contact_Historyシートが見つかりません');
+      return;
+    }
 
-  // ヘッダー行を取得
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  Logger.log('=== ヘッダー行 ===');
-  headers.forEach((header, index) => {
-    Logger.log(`${String.fromCharCode(65 + index)}列（インデックス${index}）: ${header}`);
-  });
-
-  // データ行数を確認
-  const lastRow = sheet.getLastRow();
-  Logger.log(`\n=== データ行数 ===`);
-  Logger.log(`最終行: ${lastRow}行目（ヘッダー除くデータ: ${lastRow - 1}件）`);
-
-  // 最初の10件のデータを表示
-  if (lastRow > 1) {
-    Logger.log('\n=== 最初の10件のデータ ===');
-    const dataRows = Math.min(10, lastRow - 1);
-    const data = sheet.getRange(2, 1, dataRows, sheet.getLastColumn()).getValues();
-
-    data.forEach((row, rowIndex) => {
-      Logger.log(`\n${rowIndex + 2}行目:`);
-      row.forEach((cell, colIndex) => {
-        const cellValue = cell === null ? 'null' : cell === '' ? '(空文字)' : cell;
-        Logger.log(`  ${String.fromCharCode(65 + colIndex)}列: ${cellValue}`);
-      });
+    // ヘッダー行を取得（getDisplayValues()を使用してデータバリデーションエラーを回避）
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
+    Logger.log('=== ヘッダー行 ===');
+    headers.forEach((header, index) => {
+      Logger.log(`${String.fromCharCode(65 + index)}列（インデックス${index}）: ${header}`);
     });
-  }
 
-  Logger.log('\n========================================\n');
+    // データ行数を確認
+    const lastRow = sheet.getLastRow();
+    Logger.log(`\n=== データ行数 ===`);
+    Logger.log(`最終行: ${lastRow}行目（ヘッダー除くデータ: ${lastRow - 1}件）`);
+
+    // 最初の10件のデータを表示（getDisplayValues()を使用）
+    if (lastRow > 1) {
+      Logger.log('\n=== 最初の10件のデータ ===');
+      const dataRows = Math.min(10, lastRow - 1);
+      const data = sheet.getRange(2, 1, dataRows, sheet.getLastColumn()).getDisplayValues();
+
+      data.forEach((row, rowIndex) => {
+        Logger.log(`\n${rowIndex + 2}行目:`);
+        row.forEach((cell, colIndex) => {
+          const cellValue = cell === null ? 'null' : cell === '' ? '(空文字)' : cell;
+          Logger.log(`  ${String.fromCharCode(65 + colIndex)}列: ${cellValue}`);
+        });
+      });
+    }
+
+    Logger.log('\n========================================\n');
+
+  } catch (error) {
+    Logger.log(`❌ debugContactHistoryエラー: ${error.message}`);
+    Logger.log(error.stack);
+  }
 }
 
 /**
