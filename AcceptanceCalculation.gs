@@ -1656,3 +1656,665 @@ function calculateSelectionSpeedScore(candidateId) {
     return DEFAULT_SCORES_PHASE3_2.SELECTION_SPEED;
   }
 }
+
+/**
+ * ========================================
+ * Phase 3-3: 最終統合・Engagement_Log書き込み
+ * ========================================
+ */
+
+// Phase 3-3のデフォルト値
+const DEFAULT_SCORES_PHASE3_3 = {
+  SELF_REPORT: 70,           // 自己申告要素スコア
+  ACCEPTANCE_RATE: 50        // 承諾可能性（最終統合）
+};
+
+// 承諾可能性の重み付け（初回面談・社員面談）
+const ACCEPTANCE_RATE_WEIGHTS_EARLY = {
+  FOUNDATION: 0.4,           // 基礎要素 40%
+  RELATIONSHIP: 0.3,         // 関係性要素 30%
+  BEHAVIOR: 0.3              // 行動シグナル要素 30%
+};
+
+// 承諾可能性の重み付け（2次面接・内定後）
+const ACCEPTANCE_RATE_WEIGHTS_LATE = {
+  FOUNDATION: 0.4,           // 基礎要素 40%
+  RELATIONSHIP: 0.3,         // 関係性要素 30%
+  BEHAVIOR: 0.2,             // 行動シグナル要素 20%
+  SELF_REPORT: 0.1           // 自己申告要素 10%
+};
+
+// Engagement_Logの列マッピング（appendRow用の配列インデックス）
+const ENGAGEMENT_LOG_COLUMNS = {
+  ENGAGEMENT_ID: 0,          // A列
+  CANDIDATE_ID: 1,           // B列
+  CANDIDATE_NAME: 2,         // C列
+  ENGAGEMENT_DATE: 3,        // D列
+  PHASE: 4,                  // E列
+  AI_PREDICTION: 5,          // F列: AI予測_承諾可能性
+  HUMAN_INTUITION: 6,        // G列: 人間の直感_承諾可能性
+  INTEGRATED: 7,             // H列: 統合_承諾可能性
+  CONFIDENCE: 8,             // I列: 信頼度
+  MOTIVATION_SCORE: 9,       // J列: 志望度スコア
+  COMPETITIVE_SCORE: 10,     // K列: 競合優位性スコア
+  CONCERN_SCORE: 11,         // L列: 懸念解消度スコア
+  CORE_MOTIVATION: 12,       // M列: コアモチベーション
+  TOP_CONCERN: 13            // N列: 主要懸念事項
+};
+
+// Candidates_Masterの列番号（Y列・Z列）
+const CANDIDATES_MASTER_EXTENDED_COLUMNS = {
+  CORE_MOTIVATION: 24,       // Y列（A=0, Y=24）
+  TOP_CONCERN: 25            // Z列（A=0, Z=25）
+};
+
+/**
+ * 自己申告要素スコアの計算（2次面接・内定後のみ）
+ *
+ * @param {string} candidateId - 候補者ID
+ * @param {string} phase - アンケート種別
+ * @return {number|null} 自己申告要素スコア（0-100点）、または null（初回面談・社員面談）
+ *
+ * データ取得元:
+ * - 2次面接: M列（Q12. 承諾可能性、1-10）
+ * - 内定後: H列（Q7. PIGNUSで働くことへの前向きさ、1-10）
+ *
+ * スコアリング:
+ * 自己申告スコア = (回答値 × 10)
+ *
+ * 戻り値:
+ * - 初回面談・社員面談: null（自己申告要素なし）
+ * - 2次面接・内定後: 0-100点
+ * - データなし: 70点（デフォルト値）
+ */
+function calculateSelfReportScore(candidateId, phase) {
+  try {
+    // 初回面談・社員面談では自己申告要素なし
+    if (phase === '初回面談' || phase === '社員面談') {
+      Logger.log(`⚠️ 自己申告要素なし: ${phase} → null`);
+      return null; // nullを返す
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const email = getCandidateEmail(candidateId);
+
+    if (!email) {
+      Logger.log(`❌ メールアドレスなし: ${candidateId}`);
+      return DEFAULT_SCORES_PHASE3_3.SELF_REPORT;
+    }
+
+    let sheetName, column;
+    if (phase === '2次面接') {
+      sheetName = 'アンケート_2次面接';
+      column = 'M'; // Q12. 承諾可能性（要確認）
+    } else if (phase === '内定後') {
+      sheetName = 'アンケート_内定';
+      column = 'H'; // Q7. PIGNUSで働くことへの前向きさ
+    } else {
+      Logger.log(`⚠️ 不明なフェーズ: ${phase}`);
+      return null;
+    }
+
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      Logger.log(`❌ シートが見つかりません: ${sheetName}`);
+      return DEFAULT_SCORES_PHASE3_3.SELF_REPORT;
+    }
+
+    const data = sheet.getDataRange().getValues();
+
+    // ヘッダー行をスキップ（i=1から開始）
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][2] === email) { // C列: メールアドレス
+        const colIndex = column.charCodeAt(0) - 65;
+        const selfReportRaw = data[i][colIndex];
+
+        if (selfReportRaw && typeof selfReportRaw === 'number') {
+          // 1-10を10-100に変換
+          const score = selfReportRaw * 10;
+          Logger.log(`✅ 自己申告スコア: ${score}点（生値: ${selfReportRaw}）`);
+          return Math.min(Math.max(Math.round(score), 0), 100);
+        }
+
+        Logger.log(`⚠️ 自己申告データなし: ${candidateId}, ${phase} → デフォルト値`);
+        return DEFAULT_SCORES_PHASE3_3.SELF_REPORT;
+      }
+    }
+
+    Logger.log(`⚠️ アンケート回答なし: ${candidateId}, ${phase} → デフォルト値`);
+    return DEFAULT_SCORES_PHASE3_3.SELF_REPORT;
+
+  } catch (error) {
+    Logger.log(`❌ 自己申告スコアエラー: ${error}`);
+    return DEFAULT_SCORES_PHASE3_3.SELF_REPORT;
+  }
+}
+
+/**
+ * 承諾可能性の計算（最終統合）
+ *
+ * @param {string} candidateId - 候補者ID
+ * @param {string} phase - アンケート種別
+ * @return {number} 承諾可能性（0-100点）
+ *
+ * 計算式:
+ * 【初回面談・社員面談】
+ * 承諾可能性 = 基礎要素(40%) + 関係性要素(30%) + 行動シグナル要素(30%)
+ *
+ * 【2次面接・内定後】
+ * 承諾可能性 = 基礎要素(40%) + 関係性要素(30%) + 行動シグナル要素(20%) + 自己申告要素(10%)
+ */
+function calculateAcceptanceRate(candidateId, phase) {
+  try {
+    Logger.log(`\n========================================`);
+    Logger.log(`承諾可能性計算: ${candidateId}, ${phase}`);
+    Logger.log(`========================================`);
+
+    // Phase 3-1: 基礎要素（40%）
+    const foundationScore = calculateFoundationScore(candidateId, phase);
+
+    // Phase 3-2: 関係性要素（30%）
+    const relationshipScore = calculateRelationshipScore(candidateId);
+
+    // Phase 3-2: 行動シグナル要素
+    const behaviorScore = calculateBehaviorScore(candidateId, phase);
+
+    // Phase 3-3: 自己申告要素（2次面接・内定後のみ）
+    const selfReportScore = calculateSelfReportScore(candidateId, phase);
+
+    let acceptanceRate;
+
+    if (selfReportScore === null) {
+      // 初回面談・社員面談: 行動シグナル30%
+      acceptanceRate =
+        foundationScore * ACCEPTANCE_RATE_WEIGHTS_EARLY.FOUNDATION +
+        relationshipScore * ACCEPTANCE_RATE_WEIGHTS_EARLY.RELATIONSHIP +
+        behaviorScore * ACCEPTANCE_RATE_WEIGHTS_EARLY.BEHAVIOR;
+
+      Logger.log(`\n--- 承諾可能性内訳（初回面談・社員面談）---`);
+      Logger.log(`基礎要素: ${foundationScore} × 0.4 = ${(foundationScore * 0.4).toFixed(1)}`);
+      Logger.log(`関係性要素: ${relationshipScore} × 0.3 = ${(relationshipScore * 0.3).toFixed(1)}`);
+      Logger.log(`行動シグナル要素: ${behaviorScore} × 0.3 = ${(behaviorScore * 0.3).toFixed(1)}`);
+
+    } else {
+      // 2次面接・内定後: 行動シグナル20% + 自己申告10%
+      acceptanceRate =
+        foundationScore * ACCEPTANCE_RATE_WEIGHTS_LATE.FOUNDATION +
+        relationshipScore * ACCEPTANCE_RATE_WEIGHTS_LATE.RELATIONSHIP +
+        behaviorScore * ACCEPTANCE_RATE_WEIGHTS_LATE.BEHAVIOR +
+        selfReportScore * ACCEPTANCE_RATE_WEIGHTS_LATE.SELF_REPORT;
+
+      Logger.log(`\n--- 承諾可能性内訳（2次面接・内定後）---`);
+      Logger.log(`基礎要素: ${foundationScore} × 0.4 = ${(foundationScore * 0.4).toFixed(1)}`);
+      Logger.log(`関係性要素: ${relationshipScore} × 0.3 = ${(relationshipScore * 0.3).toFixed(1)}`);
+      Logger.log(`行動シグナル要素: ${behaviorScore} × 0.2 = ${(behaviorScore * 0.2).toFixed(1)}`);
+      Logger.log(`自己申告要素: ${selfReportScore} × 0.1 = ${(selfReportScore * 0.1).toFixed(1)}`);
+    }
+
+    Logger.log(`承諾可能性（合計）: ${acceptanceRate.toFixed(1)}`);
+    Logger.log(`========================================\n`);
+
+    return Math.round(acceptanceRate); // 四捨五入
+
+  } catch (error) {
+    Logger.log(`❌ 承諾可能性計算エラー: ${error}`);
+    return DEFAULT_SCORES_PHASE3_3.ACCEPTANCE_RATE;
+  }
+}
+
+/**
+ * コアモチベーションを取得
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {string} コアモチベーション
+ *
+ * データ取得元:
+ * - Candidates_Master: Y列（コアモチベーション）
+ *   インデックス: 24（A=0, Y=24）
+ */
+function getCoreMotivation(candidateId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const master = ss.getSheetByName(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
+
+    if (!master) {
+      Logger.log('❌ Candidates_Masterシートが見つかりません');
+      return '不明';
+    }
+
+    const data = master.getDataRange().getValues();
+
+    // ヘッダー行をスキップ（i=1から開始）
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === candidateId) { // A列: candidate_id
+        const coreMotivation = data[i][CANDIDATES_MASTER_EXTENDED_COLUMNS.CORE_MOTIVATION];
+
+        if (coreMotivation && coreMotivation !== '' && coreMotivation !== 'undefined') {
+          Logger.log(`✅ コアモチベーション: ${candidateId} → ${coreMotivation}`);
+          return String(coreMotivation);
+        }
+
+        Logger.log(`⚠️ コアモチベーションが空: ${candidateId} → 不明`);
+        return '不明';
+      }
+    }
+
+    Logger.log(`❌ 候補者が見つかりません: ${candidateId}`);
+    return '不明';
+
+  } catch (error) {
+    Logger.log(`❌ コアモチベーション取得エラー: ${error}`);
+    return '不明';
+  }
+}
+
+/**
+ * 主要懸念事項を取得
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {string} 主要懸念事項
+ *
+ * データ取得元:
+ * - Candidates_Master: Z列（主要懸念事項）
+ *   インデックス: 25（A=0, Z=25）
+ */
+function getTopConcern(candidateId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const master = ss.getSheetByName(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
+
+    if (!master) {
+      Logger.log('❌ Candidates_Masterシートが見つかりません');
+      return 'なし';
+    }
+
+    const data = master.getDataRange().getValues();
+
+    // ヘッダー行をスキップ（i=1から開始）
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === candidateId) { // A列: candidate_id
+        const topConcern = data[i][CANDIDATES_MASTER_EXTENDED_COLUMNS.TOP_CONCERN];
+
+        if (topConcern && topConcern !== '' && topConcern !== 'undefined') {
+          Logger.log(`✅ 主要懸念事項: ${candidateId} → ${topConcern}`);
+          return String(topConcern);
+        }
+
+        Logger.log(`⚠️ 主要懸念事項が空: ${candidateId} → なし`);
+        return 'なし';
+      }
+    }
+
+    Logger.log(`❌ 候補者が見つかりません: ${candidateId}`);
+    return 'なし';
+
+  } catch (error) {
+    Logger.log(`❌ 主要懸念事項取得エラー: ${error}`);
+    return 'なし';
+  }
+}
+
+/**
+ * Engagement_Logに承諾可能性を書き込む
+ *
+ * @param {string} candidateId - 候補者ID
+ * @param {string} phase - アンケート種別
+ * @return {boolean} 成功/失敗
+ *
+ * Engagement_Logの列構成（appendRowで追加）:
+ * A: engagement_id
+ * B: candidate_id
+ * C: 氏名
+ * D: engagement_date
+ * E: 選考フェーズ
+ * F: AI予測_承諾可能性
+ * G: 人間の直感_承諾可能性
+ * H: 統合_承諾可能性
+ * I: 信頼度
+ * J: 志望度スコア
+ * K: 競合優位性スコア
+ * L: 懸念解消度スコア
+ * M: コアモチベーション
+ * N: 主要懸念事項
+ */
+function writeToEngagementLog(candidateId, phase) {
+  try {
+    Logger.log(`\n========================================`);
+    Logger.log(`Engagement_Log書き込み: ${candidateId}, ${phase}`);
+    Logger.log(`========================================`);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const engagementSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.ENGAGEMENT_LOG);
+
+    if (!engagementSheet) {
+      Logger.log('❌ Engagement_Logシートが見つかりません');
+      Logger.log('⚠️ Engagement_Logシートを作成してください');
+      return false;
+    }
+
+    // 承諾可能性を計算
+    const acceptanceRate = calculateAcceptanceRate(candidateId, phase);
+
+    // 候補者情報を取得
+    const master = ss.getSheetByName(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
+    if (!master) {
+      Logger.log('❌ Candidates_Masterシートが見つかりません');
+      return false;
+    }
+
+    const masterData = master.getDataRange().getValues();
+    let candidateName = '';
+
+    for (let i = 1; i < masterData.length; i++) {
+      if (masterData[i][0] === candidateId) {
+        candidateName = masterData[i][1]; // B列: 氏名
+        break;
+      }
+    }
+
+    if (!candidateName) {
+      Logger.log(`❌ 候補者名が見つかりません: ${candidateId}`);
+      return false;
+    }
+
+    // 各要素スコアを取得
+    const motivationScore = calculateMotivationScore(candidateId, phase);
+    const competitiveScore = calculateCompetitiveAdvantageScore(candidateId, phase);
+    const concernScore = calculateConcernResolutionScore(candidateId, phase);
+
+    // コアモチベーションと主要懸念を取得
+    const coreMotivation = getCoreMotivation(candidateId);
+    const topConcern = getTopConcern(candidateId);
+
+    // engagement_idを生成
+    const timestamp = new Date().getTime();
+    const engagementId = `ENG-${candidateId}-${timestamp}`;
+
+    // 新規行を作成
+    const newRow = [];
+    newRow[ENGAGEMENT_LOG_COLUMNS.ENGAGEMENT_ID] = engagementId;
+    newRow[ENGAGEMENT_LOG_COLUMNS.CANDIDATE_ID] = candidateId;
+    newRow[ENGAGEMENT_LOG_COLUMNS.CANDIDATE_NAME] = candidateName;
+    newRow[ENGAGEMENT_LOG_COLUMNS.ENGAGEMENT_DATE] = new Date();
+    newRow[ENGAGEMENT_LOG_COLUMNS.PHASE] = phase;
+    newRow[ENGAGEMENT_LOG_COLUMNS.AI_PREDICTION] = acceptanceRate;
+    newRow[ENGAGEMENT_LOG_COLUMNS.HUMAN_INTUITION] = ''; // 空白
+    newRow[ENGAGEMENT_LOG_COLUMNS.INTEGRATED] = acceptanceRate; // AI予測と同じ
+    newRow[ENGAGEMENT_LOG_COLUMNS.CONFIDENCE] = '高'; // 固定値
+    newRow[ENGAGEMENT_LOG_COLUMNS.MOTIVATION_SCORE] = motivationScore;
+    newRow[ENGAGEMENT_LOG_COLUMNS.COMPETITIVE_SCORE] = competitiveScore;
+    newRow[ENGAGEMENT_LOG_COLUMNS.CONCERN_SCORE] = concernScore;
+    newRow[ENGAGEMENT_LOG_COLUMNS.CORE_MOTIVATION] = coreMotivation;
+    newRow[ENGAGEMENT_LOG_COLUMNS.TOP_CONCERN] = topConcern;
+
+    // 行を追加
+    engagementSheet.appendRow(newRow);
+
+    Logger.log(`✅ Engagement_Logに書き込み完了`);
+    Logger.log(`  - engagement_id: ${engagementId}`);
+    Logger.log(`  - 承諾可能性: ${acceptanceRate}点`);
+    Logger.log(`  - コアモチベーション: ${coreMotivation}`);
+    Logger.log(`  - 主要懸念事項: ${topConcern}`);
+    Logger.log(`========================================\n`);
+
+    return true;
+
+  } catch (error) {
+    Logger.log(`❌ Engagement_Log書き込みエラー: ${error}`);
+    return false;
+  }
+}
+
+/**
+ * ========================================
+ * Phase 3-3: テスト関数
+ * ========================================
+ */
+
+/**
+ * Phase 3-3の依存関数の確認
+ */
+function checkPhase33Dependencies() {
+  Logger.log('\n=== Phase 3-3依存関数の確認 ===');
+
+  try {
+    // Phase 3-1の関数
+    const foundation = calculateFoundationScore('C001', '初回面談');
+    Logger.log(`✅ calculateFoundationScore(): ${foundation}`);
+
+    // Phase 3-2の関数
+    const relationship = calculateRelationshipScore('C001');
+    Logger.log(`✅ calculateRelationshipScore(): ${relationship}`);
+
+    const behavior = calculateBehaviorScore('C001', '初回面談');
+    Logger.log(`✅ calculateBehaviorScore(): ${behavior}`);
+
+    Logger.log('\n✅ 全ての依存関数が正常に動作しています');
+
+  } catch (error) {
+    Logger.log(`\n❌ エラー: ${error}`);
+    Logger.log('⚠️ Phase 3-1またはPhase 3-2が正しく実装されていません');
+  }
+}
+
+/**
+ * Candidates_Masterの列構造確認
+ */
+function checkCandidatesMasterColumns() {
+  Logger.log('\n=== Candidates_Master列構造の確認 ===');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const master = ss.getSheetByName(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
+
+  if (!master) {
+    Logger.log('❌ Candidates_Masterシートが見つかりません');
+    return;
+  }
+
+  const headers = master.getRange(1, 1, 1, master.getLastColumn()).getValues()[0];
+
+  // Y列（インデックス24）を確認
+  Logger.log(`Y列（インデックス24）: ${headers[24]}`);
+  // 期待値: "コアモチベーション" または類似の列名
+
+  // Z列（インデックス25）を確認
+  Logger.log(`Z列（インデックス25）: ${headers[25]}`);
+  // 期待値: "主要懸念事項" または類似の列名
+
+  Logger.log('\n⚠️ 上記の列名を確認してください');
+  Logger.log('⚠️ 列名が異なる場合、getCoreMotivation()とgetTopConcern()の列番号を修正してください');
+}
+
+/**
+ * Engagement_Logの列構造確認
+ */
+function checkEngagementLogStructure() {
+  Logger.log('\n=== Engagement_Log列構造の確認 ===');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const engagementLog = ss.getSheetByName(CONFIG.SHEET_NAMES.ENGAGEMENT_LOG);
+
+  if (!engagementLog) {
+    Logger.log('❌ Engagement_Logシートが見つかりません');
+    Logger.log('⚠️ Engagement_Logシートを作成する必要があります');
+    return;
+  }
+
+  const headers = engagementLog.getRange(1, 1, 1, engagementLog.getLastColumn()).getValues()[0];
+
+  Logger.log('\nEngagement_Logの列構造:');
+  for (let i = 0; i < Math.min(headers.length, 20); i++) {
+    const columnLetter = String.fromCharCode(65 + i);
+    Logger.log(`${columnLetter}列（インデックス${i}）: ${headers[i]}`);
+  }
+
+  Logger.log('\n⚠️ 上記の列構造を確認してください');
+  Logger.log('⚠️ 列構造が異なる場合、writeToEngagementLog()の列マッピングを修正してください');
+}
+
+/**
+ * アンケートシートの自己申告列確認
+ */
+function checkSurveyColumnsForSelfReport() {
+  Logger.log('\n=== アンケートシートの自己申告列確認 ===');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 2次面接
+  const interview2 = ss.getSheetByName('アンケート_2次面接');
+  if (interview2) {
+    const headers1 = interview2.getRange(1, 1, 1, interview2.getLastColumn()).getValues()[0];
+    Logger.log(`\n2次面接 M列（インデックス12）: ${headers1[12]}`);
+    // 期待値: Q12またはQ13（承諾可能性、1-10）
+  }
+
+  // 内定後
+  const offer = ss.getSheetByName('アンケート_内定');
+  if (offer) {
+    const headers2 = offer.getRange(1, 1, 1, offer.getLastColumn()).getValues()[0];
+    Logger.log(`内定後 H列（インデックス7）: ${headers2[7]}`);
+    // 期待値: Q7（PIGNUSで働くことへの前向きさ、1-10）
+  }
+
+  Logger.log('\n⚠️ 上記の列名を確認してください');
+  Logger.log('⚠️ 列名が異なる場合、calculateSelfReportScore()の列番号を修正してください');
+}
+
+/**
+ * Phase 3-3の事前確認テスト
+ */
+function runPhase33PreChecks() {
+  Logger.log('\n========================================');
+  Logger.log('Phase 3-3 事前確認テスト');
+  Logger.log('========================================\n');
+
+  // 依存関数の確認
+  checkPhase33Dependencies();
+
+  // Candidates_Masterの列構造確認
+  checkCandidatesMasterColumns();
+
+  // Engagement_Logの列構造確認
+  checkEngagementLogStructure();
+
+  // アンケートシートの列構造確認
+  checkSurveyColumnsForSelfReport();
+
+  Logger.log('\n========================================');
+  Logger.log('事前確認テスト完了');
+  Logger.log('========================================\n');
+}
+
+/**
+ * 自己申告要素スコアのテスト
+ */
+function testSelfReportScore() {
+  Logger.log('\n=== 自己申告要素スコアのテスト ===');
+
+  const candidates = ['C001', 'C002', 'C003'];
+
+  for (let candidate of candidates) {
+    Logger.log(`\n--- ${candidate} ---`);
+
+    // 初回面談（自己申告なし）
+    const score1 = calculateSelfReportScore(candidate, '初回面談');
+    Logger.log(`初回面談: ${score1} (期待値: null)`);
+
+    // 社員面談（自己申告なし）
+    const score2 = calculateSelfReportScore(candidate, '社員面談');
+    Logger.log(`社員面談: ${score2} (期待値: null)`);
+
+    // 2次面接（自己申告あり）
+    const score3 = calculateSelfReportScore(candidate, '2次面接');
+    Logger.log(`2次面接: ${score3}点`);
+
+    // 内定後（自己申告あり）
+    const score4 = calculateSelfReportScore(candidate, '内定後');
+    Logger.log(`内定後: ${score4}点`);
+  }
+}
+
+/**
+ * 承諾可能性計算のテスト
+ */
+function testAcceptanceRate() {
+  Logger.log('\n=== 承諾可能性計算のテスト ===');
+
+  const candidates = ['C001']; // まずはC001のみ
+  const phases = ['初回面談', '社員面談', '2次面接', '内定後'];
+
+  for (let candidate of candidates) {
+    Logger.log(`\n--- ${candidate} ---`);
+    for (let phase of phases) {
+      const rate = calculateAcceptanceRate(candidate, phase);
+      Logger.log(`${phase}: ${rate}点`);
+    }
+  }
+}
+
+/**
+ * 補助関数のテスト
+ */
+function testHelperFunctionsPhase33() {
+  Logger.log('\n=== 補助関数のテスト ===');
+
+  const candidates = ['C001', 'C002', 'C003'];
+
+  for (let candidate of candidates) {
+    Logger.log(`\n--- ${candidate} ---`);
+
+    const coreMotivation = getCoreMotivation(candidate);
+    Logger.log(`コアモチベーション: ${coreMotivation}`);
+
+    const topConcern = getTopConcern(candidate);
+    Logger.log(`主要懸念事項: ${topConcern}`);
+  }
+}
+
+/**
+ * Engagement_Log書き込みのテスト
+ */
+function testWriteToEngagementLog() {
+  Logger.log('\n=== Engagement_Log書き込みのテスト ===');
+
+  // C001の初回面談を書き込み
+  const result1 = writeToEngagementLog('C001', '初回面談');
+  Logger.log(`\nC001-初回面談: ${result1 ? '✅ 成功' : '❌ 失敗'}`);
+
+  // C001の2次面接を書き込み
+  const result2 = writeToEngagementLog('C001', '2次面接');
+  Logger.log(`C001-2次面接: ${result2 ? '✅ 成功' : '❌ 失敗'}`);
+
+  // C001の内定後を書き込み
+  const result3 = writeToEngagementLog('C001', '内定後');
+  Logger.log(`C001-内定後: ${result3 ? '✅ 成功' : '❌ 失敗'}`);
+
+  Logger.log('\n⚠️ Engagement_Logシートを確認して、3件のデータが追加されていることを確認してください');
+}
+
+/**
+ * Phase 3-3の全テストを実行
+ */
+function runAllPhase33Tests() {
+  Logger.log('\n========================================');
+  Logger.log('Phase 3-3 全テスト実行');
+  Logger.log('========================================\n');
+
+  // 事前確認
+  Logger.log('>>> 事前確認テスト');
+  runPhase33PreChecks();
+
+  // 単体テスト
+  Logger.log('\n>>> 単体テスト');
+  testSelfReportScore();
+  testAcceptanceRate();
+  testHelperFunctionsPhase33();
+
+  // Engagement_Log書き込み
+  Logger.log('\n>>> Engagement_Log書き込みテスト');
+  testWriteToEngagementLog();
+
+  Logger.log('\n========================================');
+  Logger.log('Phase 3-3 全テスト完了');
+  Logger.log('========================================\n');
+}
