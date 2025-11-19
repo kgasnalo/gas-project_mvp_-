@@ -2036,7 +2036,7 @@ function writeToEngagementLog(candidateId, phase) {
     newRow[ENGAGEMENT_LOG_COLUMNS.CANDIDATE_ID] = candidateId;
     newRow[ENGAGEMENT_LOG_COLUMNS.CANDIDATE_NAME] = candidateName;
     newRow[ENGAGEMENT_LOG_COLUMNS.ENGAGEMENT_DATE] = new Date();
-    newRow[ENGAGEMENT_LOG_COLUMNS.PHASE] = phase;
+    newRow[ENGAGEMENT_LOG_COLUMNS.PHASE] = phase;  // phaseをそのまま使用
     newRow[ENGAGEMENT_LOG_COLUMNS.AI_PREDICTION] = acceptanceRate;
     newRow[ENGAGEMENT_LOG_COLUMNS.HUMAN_INTUITION] = ''; // 空白
     newRow[ENGAGEMENT_LOG_COLUMNS.INTEGRATED] = acceptanceRate; // AI予測と同じ
@@ -2053,6 +2053,7 @@ function writeToEngagementLog(candidateId, phase) {
     Logger.log(`✅ Engagement_Logに書き込み完了`);
     Logger.log(`  - engagement_id: ${engagementId}`);
     Logger.log(`  - 承諾可能性: ${acceptanceRate}点`);
+    Logger.log(`  - contact_type: ${phase}`);
     Logger.log(`  - コアモチベーション: ${coreMotivation}`);
     Logger.log(`  - 主要懸念事項: ${topConcern}`);
     Logger.log(`========================================\n`);
