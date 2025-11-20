@@ -134,8 +134,9 @@ function processSurveyPhase(phase) {
       const candidateId = getCandidateIdByEmail(email);
 
       if (!candidateId) {
-        Logger.log(`❌ 候補者IDが見つかりません: ${email}`);
-        result.errors++;
+        Logger.log(`⚠️ 候補者IDが見つかりません: ${email} - スキップ`);
+        Logger.log(`   （Candidates_Masterに登録されていない可能性があります）`);
+        result.skipped++;
         continue;
       }
 
@@ -194,7 +195,7 @@ function getSheetNameByPhase(phase) {
     '初回面談': 'アンケート_初回面談',
     '社員面談': 'アンケート_社員面談',
     '2次面接': 'アンケート_2次面接',
-    '内定後': 'アンケート_内定後'
+    '内定後': 'アンケート_内定'  // 修正: 「後」を削除
   };
 
   return mapping[phase] || null;
