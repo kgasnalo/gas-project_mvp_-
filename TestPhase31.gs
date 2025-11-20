@@ -670,3 +670,203 @@ function testTriggerManually() {
     Logger.log(`❌ 初回面談トリガー: 失敗 - ${error.message}`);
   }
 }
+
+/**
+ * ========================================
+ * Phase 3.5: 時間ベース自動チェックのテスト
+ * ========================================
+ */
+
+/**
+ * 自動チェックシステムの包括的テスト
+ */
+function testAutomatedCheckSystem() {
+  Logger.log('\n========================================');
+  Logger.log('Phase 3.5: 自動チェックシステムテスト');
+  Logger.log('========================================\n');
+
+  try {
+    // ステップ1: Processing_Logの初期化
+    Logger.log('=== ステップ1: Processing_Log初期化 ===');
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let processingLog = ss.getSheetByName('Processing_Log');
+
+    if (processingLog) {
+      Logger.log('既存のProcessing_Logを削除します...');
+      ss.deleteSheet(processingLog);
+    }
+
+    // Processing_Logを作成
+    processingLog = createProcessingLogSheet();
+    Logger.log('✅ Processing_Log作成完了\n');
+
+    // ステップ2: 初期状態の確認
+    Logger.log('=== ステップ2: 初期状態の確認 ===');
+    const data = processingLog.getDataRange().getValues();
+    Logger.log('Processing_Log初期データ:');
+    for (let i = 1; i < data.length; i++) {
+      Logger.log(`  ${data[i][0]}: 最終処理行=${data[i][1]}, 最終更新=${data[i][2]}`);
+    }
+    Logger.log('');
+
+    // ステップ3: 自動チェック実行
+    Logger.log('=== ステップ3: 自動チェック実行 ===');
+    const results = checkForNewSurveyResponses();
+
+    Logger.log('\n自動チェック結果:');
+    Logger.log(`  処理済み: ${results.processed}件`);
+    Logger.log(`  スキップ: ${results.skipped}件`);
+    Logger.log(`  エラー: ${results.errors}件\n`);
+
+    // ステップ4: Processing_Logの更新確認
+    Logger.log('=== ステップ4: Processing_Log更新確認 ===');
+    const updatedData = processingLog.getDataRange().getValues();
+    Logger.log('Processing_Log更新後:');
+    for (let i = 1; i < updatedData.length; i++) {
+      const rowChanged = updatedData[i][1] !== data[i][1];
+      const marker = rowChanged ? '✅ 更新' : '   ';
+      Logger.log(`  ${marker} ${updatedData[i][0]}: 最終処理行=${updatedData[i][1]}, 最終更新=${new Date(updatedData[i][2]).toLocaleString('ja-JP')}`);
+    }
+    Logger.log('');
+
+    // ステップ5: Engagement_Logの確認
+    Logger.log('=== ステップ5: Engagement_Log確認 ===');
+    const engagementLog = ss.getSheetByName(CONFIG.SHEET_NAMES.ENGAGEMENT_LOG);
+    const engagementData = engagementLog.getDataRange().getValues();
+    const lastRows = engagementData.slice(-5); // 最後の5行
+
+    Logger.log('Engagement_Log最新5件:');
+    for (let row of lastRows) {
+      if (row[0] === 'engagement_id') continue; // ヘッダーをスキップ
+      Logger.log(`  ${row[1]} | ${row[2]} | ${row[5]}点 | ${new Date(row[3]).toLocaleString('ja-JP')}`);
+    }
+    Logger.log('');
+
+    // ステップ6: 2回目の実行（重複処理されないことを確認）
+    Logger.log('=== ステップ6: 2回目の実行（重複チェック） ===');
+    Logger.log('同じデータを再度チェックします...\n');
+    const results2 = checkForNewSurveyResponses();
+
+    Logger.log('2回目の自動チェック結果:');
+    Logger.log(`  処理済み: ${results2.processed}件 （期待値: 0件）`);
+    Logger.log(`  スキップ: ${results2.skipped}件`);
+    Logger.log(`  エラー: ${results2.errors}件\n`);
+
+    if (results2.processed === 0) {
+      Logger.log('✅ 重複処理なし - 正常動作確認');
+    } else {
+      Logger.log('⚠️ 重複処理が発生しています');
+    }
+
+    // 最終結果
+    Logger.log('\n========================================');
+    Logger.log('テスト結果サマリー');
+    Logger.log('========================================');
+
+    const allGood = (
+      results.processed >= 0 &&
+      results.errors === 0 &&
+      results2.processed === 0
+    );
+
+    if (allGood) {
+      Logger.log('✅ 自動チェックシステム: 全テスト成功！');
+      Logger.log('\n次のステップ:');
+      Logger.log('1. Google Apps Scriptのトリガー設定画面を開く');
+      Logger.log('2. checkForNewSurveyResponses() に時間ベーストリガーを設定');
+      Logger.log('3. 推奨: 1時間ごとに実行\n');
+    } else {
+      Logger.log('❌ 一部のテストが失敗しました');
+      Logger.log('Error_Logを確認してください\n');
+    }
+
+  } catch (error) {
+    Logger.log(`\n❌ テスト実行エラー: ${error.message}`);
+    Logger.log(error.stack);
+  }
+}
+
+/**
+ * Processing_Logのリセットとテスト
+ */
+function testProcessingLogReset() {
+  Logger.log('\n=== Processing_Logリセットテスト ===');
+
+  try {
+    // リセット前の状態を確認
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const processingLog = ss.getSheetByName('Processing_Log');
+
+    if (!processingLog) {
+      Logger.log('❌ Processing_Logシートが存在しません');
+      Logger.log('先にtestAutomatedCheckSystem()を実行してください');
+      return;
+    }
+
+    Logger.log('リセット前:');
+    const dataBefore = processingLog.getDataRange().getValues();
+    for (let i = 1; i < dataBefore.length; i++) {
+      Logger.log(`  ${dataBefore[i][0]}: 最終処理行=${dataBefore[i][1]}`);
+    }
+
+    // リセット実行
+    Logger.log('\nリセット実行中...');
+    resetProcessingLog();
+
+    // リセット後の状態を確認
+    Logger.log('\nリセット後:');
+    const dataAfter = processingLog.getDataRange().getValues();
+    for (let i = 1; i < dataAfter.length; i++) {
+      Logger.log(`  ${dataAfter[i][0]}: 最終処理行=${dataAfter[i][1]}`);
+    }
+
+    // 全て0になっているか確認
+    let allZero = true;
+    for (let i = 1; i < dataAfter.length; i++) {
+      if (dataAfter[i][1] !== 0) {
+        allZero = false;
+        break;
+      }
+    }
+
+    if (allZero) {
+      Logger.log('\n✅ リセット成功 - 全ての行番号が0になりました');
+    } else {
+      Logger.log('\n❌ リセット失敗 - 一部の行番号が0になっていません');
+    }
+
+  } catch (error) {
+    Logger.log(`❌ リセットテストエラー: ${error.message}`);
+    Logger.log(error.stack);
+  }
+}
+
+/**
+ * 個別フェーズ処理のテスト
+ */
+function testIndividualPhaseProcessing() {
+  Logger.log('\n=== 個別フェーズ処理テスト ===');
+
+  const phases = ['初回面談', '社員面談', '2次面接', '内定後'];
+
+  for (let phase of phases) {
+    Logger.log(`\n--- ${phase} ---`);
+
+    try {
+      const result = processSurveyPhase(phase);
+
+      Logger.log(`処理済み: ${result.processed}件`);
+      Logger.log(`スキップ: ${result.skipped}件`);
+      Logger.log(`エラー: ${result.errors}件`);
+
+      if (result.errors === 0) {
+        Logger.log(`✅ ${phase}: 正常処理`);
+      } else {
+        Logger.log(`❌ ${phase}: エラーあり`);
+      }
+
+    } catch (error) {
+      Logger.log(`❌ ${phase}: テスト失敗 - ${error.message}`);
+    }
+  }
+}
