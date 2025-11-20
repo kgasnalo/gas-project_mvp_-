@@ -485,3 +485,188 @@ function runAllPhase32Tests() {
     Logger.log(error.stack);
   }
 }
+
+/**
+ * ========================================
+ * Phase 3.5: 包括的テスト関数
+ * ========================================
+ */
+
+/**
+ * Phase 3.5のテストデータ投入テスト
+ */
+function testExpandedDataInsertion() {
+  Logger.log('\n=== Phase 3.5テストデータ投入テスト ===');
+
+  // データ投入実行
+  runExpandedDataInsertion();
+
+  // 投入結果の確認
+  Logger.log('\n>>> 投入結果の確認');
+
+  // 1. Candidates_Master
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const master = ss.getSheetByName(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
+  const masterData = master.getDataRange().getValues();
+
+  for (let i = 1; i <= 5; i++) {
+    const candidateId = `C00${i}`;
+    const coreMotivation = masterData[i][24]; // Y列
+    const topConcern = masterData[i][25]; // Z列
+    Logger.log(`${candidateId}: ${coreMotivation} / ${topConcern}`);
+  }
+
+  // 2. アンケート回答数
+  const survey初回 = ss.getSheetByName('アンケート_初回面談');
+  Logger.log(`\n初回面談アンケート: ${survey初回.getLastRow() - 1}件`);
+
+  const survey社員 = ss.getSheetByName('アンケート_社員面談');
+  Logger.log(`社員面談アンケート: ${survey社員.getLastRow() - 1}件`);
+
+  const survey2次 = ss.getSheetByName('アンケート_2次面接');
+  Logger.log(`2次面接アンケート: ${survey2次.getLastRow() - 1}件`);
+
+  const survey内定 = ss.getSheetByName('アンケート_内定');
+  Logger.log(`内定後アンケート: ${survey内定.getLastRow() - 1}件`);
+
+  // 3. 接点履歴
+  const contactHistory = ss.getSheetByName(CONFIG.SHEET_NAMES.CONTACT_HISTORY);
+  Logger.log(`\n接点履歴: ${contactHistory.getLastRow() - 1}件`);
+}
+
+/**
+ * Phase 3.5包括的テスト
+ *
+ * 目標: 候補者5名 × 4フェーズ = 20パターンのテスト
+ */
+function runComprehensivePhase3Tests() {
+  Logger.log('\n========================================');
+  Logger.log('Phase 3.5 包括的テスト開始');
+  Logger.log('========================================\n');
+
+  const candidates = ['C001', 'C002', 'C003', 'C004', 'C005'];
+  const phases = ['初回面談', '社員面談', '2次面接', '内定後'];
+
+  const results = [];
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (let candidate of candidates) {
+    Logger.log(`\n--- ${candidate} ---`);
+
+    for (let phase of phases) {
+      try {
+        const acceptanceRate = calculateAcceptanceRate(candidate, phase);
+
+        results.push({
+          candidate: candidate,
+          phase: phase,
+          acceptanceRate: acceptanceRate,
+          status: 'SUCCESS'
+        });
+
+        Logger.log(`✅ ${phase}: ${acceptanceRate.toFixed(1)}点`);
+        successCount++;
+
+      } catch (error) {
+        results.push({
+          candidate: candidate,
+          phase: phase,
+          status: 'ERROR',
+          error: error.toString()
+        });
+
+        Logger.log(`❌ ${phase}: エラー - ${error.message}`);
+        errorCount++;
+      }
+    }
+  }
+
+  // 結果サマリー
+  Logger.log('\n========================================');
+  Logger.log('テスト結果サマリー');
+  Logger.log('========================================');
+  Logger.log(`成功: ${successCount}/${successCount + errorCount}`);
+  Logger.log(`失敗: ${errorCount}/${successCount + errorCount}`);
+
+  if (errorCount === 0) {
+    Logger.log('\n✅ 全テスト成功！');
+  } else {
+    Logger.log('\n❌ エラーが発生しました。Error_Logを確認してください。');
+  }
+
+  // 詳細結果
+  Logger.log('\n--- 詳細結果 ---');
+  for (let result of results) {
+    if (result.status === 'SUCCESS') {
+      Logger.log(`✅ ${result.candidate} | ${result.phase} | ${result.acceptanceRate.toFixed(1)}点`);
+    } else {
+      Logger.log(`❌ ${result.candidate} | ${result.phase} | ${result.error}`);
+    }
+  }
+
+  Logger.log('\n========================================\n');
+
+  return {
+    successCount: successCount,
+    errorCount: errorCount,
+    results: results
+  };
+}
+
+/**
+ * 全候補者のEngagement_Log書き込みテスト
+ */
+function testWriteAllToEngagementLog() {
+  Logger.log('\n=== 全候補者のEngagement_Log書き込みテスト ===');
+
+  const candidates = ['C001', 'C002', 'C003', 'C004', 'C005'];
+  const phases = ['初回面談', '社員面談', '2次面接', '内定後'];
+
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (let candidate of candidates) {
+    for (let phase of phases) {
+      const success = writeToEngagementLog(candidate, phase);
+
+      if (success) {
+        successCount++;
+        Logger.log(`✅ ${candidate} - ${phase}: 書き込み成功`);
+      } else {
+        errorCount++;
+        Logger.log(`❌ ${candidate} - ${phase}: 書き込み失敗`);
+      }
+    }
+  }
+
+  Logger.log(`\n成功: ${successCount}件, 失敗: ${errorCount}件`);
+  Logger.log('\n⚠️ Engagement_Logシートを開いて、20件のデータが追加されていることを確認してください');
+}
+
+/**
+ * トリガーのテスト（手動実行）
+ *
+ * 注意: 実際のアンケート送信をシミュレート
+ */
+function testTriggerManually() {
+  Logger.log('\n=== トリガーのテスト（手動） ===');
+
+  // シミュレーションイベントオブジェクト
+  const mockEvent = {
+    values: [
+      new Date(), // タイムスタンプ
+      '田中太郎', // 名前
+      'tanaka@example.com', // メールアドレス
+      8, // その他の回答...
+    ]
+  };
+
+  // 初回面談トリガーをテスト
+  try {
+    onFormSubmit初回面談(mockEvent);
+    Logger.log('✅ 初回面談トリガー: 成功');
+  } catch (error) {
+    Logger.log(`❌ 初回面談トリガー: 失敗 - ${error.message}`);
+  }
+}
