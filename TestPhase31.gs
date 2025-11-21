@@ -870,3 +870,222 @@ function testIndividualPhaseProcessing() {
     }
   }
 }
+
+/**
+ * ========================================
+ * Phase 3.5補完: テストデータ存在確認
+ * ========================================
+ */
+
+/**
+ * テストデータの存在確認
+ *
+ * 確認項目:
+ * 1. Candidates_MasterのY列・Z列（コアモチベーション・主要懸念）
+ * 2. 各アンケートシートの回答数
+ * 3. Contact_Historyの接点履歴数
+ */
+function checkTestDataStatus() {
+  Logger.log('\n========================================');
+  Logger.log('Phase 3.5 テストデータ存在確認');
+  Logger.log('========================================\n');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const results = {
+    candidatesMaster: {},
+    surveys: {},
+    contactHistory: 0,
+    status: 'CHECKING'
+  };
+
+  try {
+    // 1. Candidates_MasterのY列・Z列確認
+    Logger.log('>>> Step 1: Candidates_Master確認');
+    const master = ss.getSheetByName(CONFIG.SHEET_NAMES.CANDIDATES_MASTER);
+
+    if (!master) {
+      Logger.log('❌ Candidates_Masterシートが見つかりません');
+      results.status = 'ERROR';
+      return results;
+    }
+
+    const masterData = master.getDataRange().getValues();
+    const candidates = ['C001', 'C002', 'C003', 'C004', 'C005'];
+
+    let yColumnCount = 0;
+    let zColumnCount = 0;
+
+    for (let candidateId of candidates) {
+      for (let i = 1; i < masterData.length; i++) {
+        if (masterData[i][0] === candidateId) {
+          const yValue = masterData[i][24]; // Y列: コアモチベーション
+          const zValue = masterData[i][25]; // Z列: 主要懸念事項
+
+          results.candidatesMaster[candidateId] = {
+            coreMotivation: yValue || '',
+            topConcern: zValue || ''
+          };
+
+          if (yValue && yValue !== '') yColumnCount++;
+          if (zValue && zValue !== '') zColumnCount++;
+
+          Logger.log(`${candidateId}:`);
+          Logger.log(`  Y列（コアモチベーション）: ${yValue || '空'}`);
+          Logger.log(`  Z列（主要懸念事項）: ${zValue || '空'}`);
+
+          break;
+        }
+      }
+    }
+
+    Logger.log(`\nY列データ数: ${yColumnCount}/5`);
+    Logger.log(`Z列データ数: ${zColumnCount}/5`);
+
+    // 2. アンケートシートの回答数確認
+    Logger.log('\n>>> Step 2: アンケート回答数確認');
+    const surveySheets = [
+      { name: 'アンケート_初回面談', key: '初回面談' },
+      { name: 'アンケート_社員面談', key: '社員面談' },
+      { name: 'アンケート_2次面接', key: '2次面接' },
+      { name: 'アンケート_内定', key: '内定後' }
+    ];
+
+    for (let survey of surveySheets) {
+      const sheet = ss.getSheetByName(survey.name);
+      if (sheet) {
+        const rowCount = sheet.getLastRow() - 1; // ヘッダー除く
+        results.surveys[survey.key] = rowCount;
+        Logger.log(`${survey.name}: ${rowCount}件`);
+      } else {
+        results.surveys[survey.key] = 0;
+        Logger.log(`${survey.name}: シートなし`);
+      }
+    }
+
+    // 3. Contact_History確認
+    Logger.log('\n>>> Step 3: Contact_History確認');
+    const contactHistory = ss.getSheetByName(CONFIG.SHEET_NAMES.CONTACT_HISTORY);
+
+    if (contactHistory) {
+      const contactCount = contactHistory.getLastRow() - 1;
+      results.contactHistory = contactCount;
+      Logger.log(`Contact_History: ${contactCount}件`);
+    } else {
+      results.contactHistory = 0;
+      Logger.log('Contact_History: シートなし');
+    }
+
+    // 判定
+    Logger.log('\n========================================');
+    Logger.log('判定結果');
+    Logger.log('========================================');
+
+    const isYColumnComplete = yColumnCount >= 5;
+    const isZColumnComplete = zColumnCount >= 5;
+    const areSurveysComplete = Object.values(results.surveys).every(count => count >= 5);
+    const isContactHistoryComplete = results.contactHistory >= 40;
+
+    Logger.log(`Y列（コアモチベーション）: ${isYColumnComplete ? '✅ 完了' : '❌ 不足'} (${yColumnCount}/5)`);
+    Logger.log(`Z列（主要懸念事項）: ${isZColumnComplete ? '✅ 完了' : '❌ 不足'} (${zColumnCount}/5)`);
+    Logger.log(`アンケート回答: ${areSurveysComplete ? '✅ 完了' : '❌ 不足'}`);
+
+    for (let key in results.surveys) {
+      const count = results.surveys[key];
+      Logger.log(`  - ${key}: ${count >= 5 ? '✅' : '❌'} ${count}/5`);
+    }
+
+    Logger.log(`Contact_History: ${isContactHistoryComplete ? '✅ 完了' : '❌ 不足'} (${results.contactHistory}/40)`);
+
+    if (isYColumnComplete && isZColumnComplete && areSurveysComplete && isContactHistoryComplete) {
+      Logger.log('\n✅ 全テストデータが投入済みです');
+      Logger.log('⚠️ 次のステップ: runComprehensivePhase3Tests()を実行してください');
+      results.status = 'COMPLETE';
+    } else {
+      Logger.log('\n❌ テストデータが不足しています');
+      Logger.log('⚠️ 次のステップ: runExpandedDataInsertion()を実行してください');
+      results.status = 'INCOMPLETE';
+    }
+
+    Logger.log('========================================\n');
+
+    return results;
+
+  } catch (error) {
+    Logger.log(`❌ エラー: ${error}`);
+    results.status = 'ERROR';
+    return results;
+  }
+}
+
+/**
+ * ========================================
+ * Phase 3.5補完: Phase 3.5完了確認
+ * ========================================
+ */
+
+/**
+ * Phase 3.5完了確認
+ *
+ * この関数を実行して、Phase 3.5が完全に完了しているか確認
+ */
+function verifyPhase35Completion() {
+  Logger.log('\n========================================');
+  Logger.log('Phase 3.5 完了確認');
+  Logger.log('========================================\n');
+
+  let allChecksPass = true;
+
+  // チェック1: テストデータ
+  Logger.log('>>> チェック1: テストデータ');
+  const dataStatus = checkTestDataStatus();
+
+  if (dataStatus.status === 'COMPLETE') {
+    Logger.log('✅ テストデータ: 完了');
+  } else {
+    Logger.log('❌ テストデータ: 不完全');
+    allChecksPass = false;
+  }
+
+  // チェック2: 包括的テスト
+  Logger.log('\n>>> チェック2: 包括的テスト');
+  const testResults = runComprehensivePhase3Tests();
+
+  if (testResults.errorCount === 0) {
+    Logger.log('✅ 包括的テスト: 全成功（20/20）');
+  } else {
+    Logger.log(`❌ 包括的テスト: ${testResults.errorCount}件のエラー`);
+    allChecksPass = false;
+  }
+
+  // チェック3: AutomatedCheck.gs
+  Logger.log('\n>>> チェック3: AutomatedCheck.gs');
+  try {
+    // 関数の存在確認
+    if (typeof checkForNewSurveyResponses === 'function') {
+      Logger.log('✅ AutomatedCheck.gs: 実装済み');
+    } else {
+      Logger.log('❌ AutomatedCheck.gs: 未実装');
+      allChecksPass = false;
+    }
+  } catch (error) {
+    Logger.log('❌ AutomatedCheck.gs: 未実装');
+    allChecksPass = false;
+  }
+
+  // 最終判定
+  Logger.log('\n========================================');
+  Logger.log('最終判定');
+  Logger.log('========================================');
+
+  if (allChecksPass) {
+    Logger.log('✅ Phase 3.5は完全に完了しています！');
+    Logger.log('✅ Phase 4に進むことができます。');
+  } else {
+    Logger.log('❌ Phase 3.5は未完了です。');
+    Logger.log('⚠️ 上記の未完了項目を対処してください。');
+  }
+
+  Logger.log('========================================\n');
+
+  return allChecksPass;
+}
