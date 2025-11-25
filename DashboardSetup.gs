@@ -1,21 +1,21 @@
 /**
  * スプレッドシート内ダッシュボード実装（Phase 4-1）
  *
- * 指示書に基づいて、Dashboard_DataとDashboardシートを作成し、
+ * Candidates_Masterから直接データを取得し、Dashboardシートを作成します。
  * QUERY関数による自動集計、条件付き書式、チャートを設定します。
  *
  * 実装内容:
- * - Dashboard_Dataシート: 中間データ用（QUERY関数の結果を格納）
  * - Dashboardシート: メインダッシュボード（可視化とKPI）
+ * - Dashboard_Dataシート: 削除（不要）
  *
- * @version 1.0
+ * @version 2.0（製品版対応）
  * @date 2025-11-25
  */
 
 /**
  * ダッシュボード全体をセットアップ（メイン関数）
  *
- * この関数を実行することで、Dashboard_DataとDashboardシートが
+ * この関数を実行することで、Dashboardシートが
  * 自動的に作成・設定されます。
  */
 function setupDashboardPhase4() {
@@ -24,7 +24,7 @@ function setupDashboardPhase4() {
     Logger.log('📊 ダッシュボードセットアップ開始');
     Logger.log('====================================');
 
-    // 1. Dashboard_Dataシートを作成
+    // 1. Dashboard_Dataシートを削除（不要）
     setupDashboardDataSheet();
 
     // 2. Dashboardシートを作成
@@ -45,8 +45,8 @@ function setupDashboardPhase4() {
       SpreadsheetApp.getUi().alert(
         '✅ ダッシュボードセットアップ完了\n\n' +
         '以下のシートが作成されました:\n' +
-        '- Dashboard_Data (中間データ)\n' +
         '- Dashboard (メインダッシュボード)\n\n' +
+        'すべてのデータはCandidates_Masterから自動取得されます。\n' +
         'Dashboardシートを開いてください。'
       );
     } catch (uiError) {
@@ -63,215 +63,24 @@ function setupDashboardPhase4() {
 /**
  * Dashboard_Dataシートをセットアップ
  *
- * 中間データを格納するシートを作成し、QUERY関数で
- * Engagement_Logから最新データを集計します。
+ * ⚠️ このシートは削除されました（Phase 4-1改善）
+ * すべてのデータはCandidates_Masterから直接取得します
+ *
+ * 理由: MVP版から製品版への移行時、スプレッドシートをコピーして
+ * 販売する際の手直し工数を削減するため、中間シートを削除
  */
 function setupDashboardDataSheet() {
-  Logger.log('📝 Dashboard_Dataシートを作成中...');
+  Logger.log('📝 Dashboard_Dataシートはスキップ（Candidates_Masterから直接取得）');
 
+  // 既存のDashboard_Dataシートがあれば削除
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  // 既存のシートを削除（再作成のため）
-  let sheet = ss.getSheetByName('Dashboard_Data');
+  const sheet = ss.getSheetByName('Dashboard_Data');
   if (sheet) {
+    Logger.log('  🗑️ 既存のDashboard_Dataシートを削除中...');
     ss.deleteSheet(sheet);
   }
 
-  // 新規作成
-  sheet = ss.insertSheet('Dashboard_Data');
-
-  // シートをEngagement_Logの後ろに移動
-  const engagementSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.ENGAGEMENT_LOG);
-  if (engagementSheet) {
-    const engagementIndex = engagementSheet.getIndex();
-    ss.setActiveSheet(sheet);
-    ss.moveActiveSheet(engagementIndex + 1);
-  }
-
-  // === セクション1: 最新承諾可能性（A1:E100） ===
-  setupLatestAcceptanceData(sheet);
-
-  // === セクション2: フェーズ別スコア推移（G1:K100） ===
-  setupPhaseScoreData(sheet);
-
-  // === セクション3: AI予測 vs 人間の直感（M1:P100） ===
-  setupAIvsHumanData(sheet);
-
-  // === セクション4: 懸念事項集計（R1:S20） ===
-  setupConcernData(sheet);
-
-  // === セクション5: ステータス分布（U1:V5） ===
-  setupStatusDistributionData(sheet);
-
-  Logger.log('✅ Dashboard_Dataシート作成完了');
-}
-
-/**
- * セクション1: 最新承諾可能性データ（A1:F100）
- * 氏名列を追加
- */
-function setupLatestAcceptanceData(sheet) {
-  // ヘッダー行（氏名を追加）
-  const headers = ['候補者ID', '氏名', '最新承諾可能性', '最新フェーズ', '最終更新日', 'コアモチベーション'];
-  sheet.getRange('A1:F1').setValues([headers]);
-  sheet.getRange('A1:F1')
-    .setFontWeight('bold')
-    .setBackground(CONFIG.COLORS.HEADER_BG)
-    .setFontColor(CONFIG.COLORS.HEADER_TEXT);
-
-  // QUERY関数（候補者別最新承諾可能性）
-  // Engagement_Logから最新データを取得し、承諾可能性順にソート
-  // 氏名を追加（C列）
-  const query = `=QUERY(Engagement_Log!A:U,
-    "SELECT B, C, MAX(H), E, MAX(D), M
-     WHERE B IS NOT NULL
-     GROUP BY B, C, E, M
-     ORDER BY MAX(H) DESC
-     LABEL B '候補者ID', C '氏名', MAX(H) '最新承諾可能性', E '最新フェーズ', MAX(D) '最終更新日', M 'コアモチベーション'",
-    1)`;
-
-  sheet.getRange('A2').setFormula(query);
-
-  // 列幅設定
-  sheet.setColumnWidth(1, 120); // A: 候補者ID
-  sheet.setColumnWidth(2, 120); // B: 氏名
-  sheet.setColumnWidth(3, 150); // C: 最新承諾可能性
-  sheet.setColumnWidth(4, 120); // D: 最新フェーズ
-  sheet.setColumnWidth(5, 140); // E: 最終更新日
-  sheet.setColumnWidth(6, 200); // F: コアモチベーション
-
-  // フォーマット設定
-  sheet.getRange('C2:C100').setNumberFormat('0.00"%"');
-  sheet.getRange('E2:E100').setNumberFormat('yyyy-mm-dd');
-}
-
-/**
- * セクション2: フェーズ別人数分布データ（G1:H10）
- *
- * 各フェーズの候補者数を集計します。
- */
-function setupPhaseScoreData(sheet) {
-  // ヘッダー行
-  const headers = ['フェーズ', '人数'];
-  sheet.getRange('G1:H1').setValues([headers]);
-  sheet.getRange('G1:H1')
-    .setFontWeight('bold')
-    .setBackground(CONFIG.COLORS.HEADER_BG)
-    .setFontColor(CONFIG.COLORS.HEADER_TEXT);
-
-  // QUERY関数でフェーズごとの人数を集計
-  const query = `=QUERY(Engagement_Log!E:E,
-    "SELECT E, COUNT(E)
-     WHERE E IS NOT NULL
-     GROUP BY E
-     ORDER BY COUNT(E) DESC
-     LABEL E 'フェーズ', COUNT(E) '人数'",
-    1)`;
-
-  sheet.getRange('G2').setFormula(query);
-
-  // 列幅設定
-  sheet.setColumnWidth(7, 120);  // G: フェーズ
-  sheet.setColumnWidth(8, 80);   // H: 人数
-
-  // フォーマット設定
-  sheet.getRange('H2:H10').setNumberFormat('0');
-}
-
-/**
- * セクション3: AI予測 vs 人間の直感（M1:P100）
- */
-function setupAIvsHumanData(sheet) {
-  // ヘッダー行
-  const headers = ['候補者ID', 'AI予測', '人間の直感', '乖離'];
-  sheet.getRange('M1:P1').setValues([headers]);
-  sheet.getRange('M1:P1')
-    .setFontWeight('bold')
-    .setBackground(CONFIG.COLORS.HEADER_BG)
-    .setFontColor(CONFIG.COLORS.HEADER_TEXT);
-
-  // QUERY関数（最新のAI予測と人間の直感を取得）
-  const query = `=QUERY(Engagement_Log!A:U,
-    "SELECT B, G, F
-     WHERE B IS NOT NULL AND G IS NOT NULL
-     ORDER BY B
-     LABEL B '候補者ID', G 'AI予測', F '人間の直感'",
-    1)`;
-
-  sheet.getRange('M2').setFormula(query);
-
-  // P列: 乖離計算
-  sheet.getRange('P2').setFormula('=IF(AND(N2<>"", O2<>""), ABS(N2-O2), "")');
-
-  // 列幅設定
-  sheet.setColumnWidth(13, 120); // M: 候補者ID
-  sheet.setColumnWidth(14, 100); // N: AI予測
-  sheet.setColumnWidth(15, 120); // O: 人間の直感
-  sheet.setColumnWidth(16, 80);  // P: 乖離
-
-  // フォーマット設定
-  sheet.getRange('N2:P100').setNumberFormat('0.00"%"');
-}
-
-/**
- * セクション4: 懸念事項集計（R1:S20）
- */
-function setupConcernData(sheet) {
-  // ヘッダー行
-  const headers = ['懸念事項', '出現回数'];
-  sheet.getRange('R1:S1').setValues([headers]);
-  sheet.getRange('R1:S1')
-    .setFontWeight('bold')
-    .setBackground(CONFIG.COLORS.HEADER_BG)
-    .setFontColor(CONFIG.COLORS.HEADER_TEXT);
-
-  // QUERY関数（懸念事項を集計）
-  const query = `=QUERY(Engagement_Log!N:N,
-    "SELECT N, COUNT(N)
-     WHERE N IS NOT NULL AND N<>'なし' AND N<>''
-     GROUP BY N
-     ORDER BY COUNT(N) DESC
-     LABEL N '懸念事項', COUNT(N) '回数'",
-    1)`;
-
-  sheet.getRange('R2').setFormula(query);
-
-  // 列幅設定
-  sheet.setColumnWidth(18, 250); // R: 懸念事項
-  sheet.setColumnWidth(19, 100); // S: 出現回数
-
-  // フォーマット設定
-  sheet.getRange('S2:S20').setNumberFormat('0');
-}
-
-/**
- * セクション5: ステータス分布データ（U1:V5）
- */
-function setupStatusDistributionData(sheet) {
-  // ヘッダー行
-  const headers = ['ステータス', '人数'];
-  sheet.getRange('U1:V1').setValues([headers]);
-  sheet.getRange('U1:V1')
-    .setFontWeight('bold')
-    .setBackground(CONFIG.COLORS.HEADER_BG)
-    .setFontColor(CONFIG.COLORS.HEADER_TEXT);
-
-  // データ行（承諾可能性の分布）
-  const data = [
-    ['高確率（80点以上）', '=COUNTIF(Dashboard_Data!B:B,">=80")'],
-    ['やや高（70-79点）', '=COUNTIFS(Dashboard_Data!B:B,">=70",Dashboard_Data!B:B,"<80")'],
-    ['標準（60-69点）', '=COUNTIFS(Dashboard_Data!B:B,">=60",Dashboard_Data!B:B,"<70")'],
-    ['要注意（60点未満）', '=COUNTIF(Dashboard_Data!B:B,"<60")']
-  ];
-
-  sheet.getRange('U2:V5').setValues(data);
-
-  // 列幅設定
-  sheet.setColumnWidth(21, 180); // U: ステータス
-  sheet.setColumnWidth(22, 80);  // V: 人数
-
-  // フォーマット設定
-  sheet.getRange('V2:V5').setNumberFormat('0');
+  Logger.log('✅ Dashboard_Data削除完了（不要）');
 }
 
 /**
@@ -357,12 +166,12 @@ function setupDashboardKPIs(sheet) {
     .setBackground('#f3f3f3')
     .setHorizontalAlignment('left');
 
-  // KPI項目
+  // KPI項目（Candidates_MasterのR列を使用）
   const kpiData = [
-    ['総候補者数', '=COUNTA(UNIQUE(Engagement_Log!B:B))-1'],
-    ['平均承諾可能性', '=ROUND(AVERAGE(Dashboard_Data!B:B),1) & "点"'],
-    ['高確率候補者数（80点以上）', '=COUNTIF(Dashboard_Data!B:B,">=80") & "名"'],
-    ['要注意候補者数（60点未満）', '=COUNTIF(Dashboard_Data!B:B,"<60") & "名"'],
+    ['総候補者数', '=COUNTA(Candidates_Master!A:A)-1 & "名"'],
+    ['平均承諾可能性', '=ROUND(AVERAGE(Candidates_Master!R:R),1) & "点"'],
+    ['高確率候補者数（80点以上）', '=COUNTIF(Candidates_Master!R:R,">=80") & "名"'],
+    ['要注意候補者数（60点未満）', '=COUNTIF(Candidates_Master!R:R,"<60") & "名"'],
     ['本日の新規記録', '=COUNTIF(Engagement_Log!D:D,TODAY()) & "件"']
   ];
 
@@ -392,7 +201,7 @@ function setupDashboardKPIs(sheet) {
 
 /**
  * 候補者ランキングセクション（A11:H30）
- * 氏名と承諾ストーリーを追加
+ * Candidates_Masterから直接取得
  */
 function setupDashboardRanking(sheet) {
   // セクションヘッダー
@@ -404,8 +213,8 @@ function setupDashboardRanking(sheet) {
     .setBackground('#f3f3f3')
     .setHorizontalAlignment('left');
 
-  // ヘッダー行（氏名と承諾ストーリーを追加）
-  const headers = ['順位', '候補者ID', '氏名', '承諾可能性', 'フェーズ', '更新日', 'モチベーション', '承諾ストーリー'];
+  // ヘッダー行
+  const headers = ['順位', '候補者ID', '氏名', '承諾可能性', 'ステータス', '更新日', 'モチベーション', '承諾ストーリー'];
   sheet.getRange('A12:H12').setValues([headers]);
   sheet.getRange('A12:H12')
     .setFontWeight('bold')
@@ -418,12 +227,13 @@ function setupDashboardRanking(sheet) {
     sheet.getRange(`A${12 + i}`).setValue(i);
   }
 
-  // QUERY関数でデータを抽出（Dashboard_Dataから）
-  // 列順: A:候補者ID, B:氏名, C:承諾可能性, D:フェーズ, E:更新日, F:モチベーション
-  const query = `=QUERY(Dashboard_Data!A:F,
-    "SELECT A, B, C, D, E, F
-     WHERE A IS NOT NULL
-     ORDER BY C DESC
+  // QUERY関数でCandidates_Masterから直接取得
+  // A:候補者ID, B:氏名, R:承諾可能性（統合）, C:ステータス, D:最終更新日, Y:コアモチベーション
+  const query = `=QUERY(Candidates_Master!A:Y,
+    "SELECT A, B, R, C, D, Y
+     WHERE A IS NOT NULL AND R IS NOT NULL
+       AND C<>'辞退' AND C<>'見送り' AND C<>'承諾'
+     ORDER BY R DESC
      LIMIT 15",
     0)`;
 
@@ -439,7 +249,7 @@ function setupDashboardRanking(sheet) {
   sheet.setColumnWidth(2, 100);  // B: 候補者ID
   sheet.setColumnWidth(3, 120);  // C: 氏名
   sheet.setColumnWidth(4, 120);  // D: 承諾可能性
-  sheet.setColumnWidth(5, 100);  // E: フェーズ
+  sheet.setColumnWidth(5, 100);  // E: ステータス
   sheet.setColumnWidth(6, 110);  // F: 更新日
   sheet.setColumnWidth(7, 150);  // G: モチベーション
   sheet.setColumnWidth(8, 300);  // H: 承諾ストーリー
@@ -456,6 +266,7 @@ function setupDashboardRanking(sheet) {
 
 /**
  * リスク候補者アラートセクション（A30:H40）
+ * Candidates_Masterから直接取得
  */
 function setupRiskAlert(sheet) {
   // セクションヘッダー
@@ -468,7 +279,7 @@ function setupRiskAlert(sheet) {
     .setHorizontalAlignment('left');
 
   // ヘッダー行
-  const headers = ['候補者ID', '氏名', '承諾可能性', 'フェーズ', '更新日', 'リスク内容', '推奨アクション'];
+  const headers = ['候補者ID', '氏名', '承諾可能性', 'ステータス', '更新日', '主要懸念事項', '推奨アクション'];
   sheet.getRange('A31:G31').setValues([headers]);
   sheet.getRange('A31:G31')
     .setFontWeight('bold')
@@ -477,32 +288,29 @@ function setupRiskAlert(sheet) {
     .setHorizontalAlignment('center');
 
   // QUERY関数でリスク候補者（承諾可能性60点未満）を抽出
-  const query = `=QUERY(Dashboard_Data!A:F,
-    "SELECT A, B, C, D, E
-     WHERE A IS NOT NULL AND C < 60
-     ORDER BY C ASC
+  // A:候補者ID, B:氏名, R:承諾可能性, C:ステータス, D:更新日, Z:主要懸念事項
+  const query = `=QUERY(Candidates_Master!A:Z,
+    "SELECT A, B, R, C, D, Z
+     WHERE A IS NOT NULL AND R IS NOT NULL AND R < 60
+       AND C<>'辞退' AND C<>'見送り' AND C<>'承諾'
+     ORDER BY R ASC
      LIMIT 8",
     0)`;
 
   sheet.getRange('A32').setFormula(query);
 
-  // G列: リスク内容（リスクシートから取得）
-  sheet.getRange('F32').setFormula(
-    '=IFERROR(QUERY(Risk!B:F, "SELECT F WHERE B=\'"&A32&"\' ORDER BY H DESC LIMIT 1", 0), "データなし")'
-  );
-
-  // H列: 推奨アクション（Engagement_Logから取得）
+  // G列: 推奨アクション
   sheet.getRange('G32').setFormula(
-    '=IFERROR(QUERY(Engagement_Log!B:R, "SELECT R WHERE B=\'"&A32&"\' ORDER BY D DESC LIMIT 1", 0), "要検討")'
+    '=IF(C32="", "", "緊急フォローアップ（承諾可能性低下）")'
   );
 
   // 列幅設定
   sheet.setColumnWidth(1, 100);  // A: 候補者ID
   sheet.setColumnWidth(2, 120);  // B: 氏名
   sheet.setColumnWidth(3, 100);  // C: 承諾可能性
-  sheet.setColumnWidth(4, 100);  // D: フェーズ
+  sheet.setColumnWidth(4, 100);  // D: ステータス
   sheet.setColumnWidth(5, 110);  // E: 更新日
-  sheet.setColumnWidth(6, 200);  // F: リスク内容
+  sheet.setColumnWidth(6, 200);  // F: 主要懸念事項
   sheet.setColumnWidth(7, 250);  // G: 推奨アクション
 
   // 書式設定
@@ -518,6 +326,7 @@ function setupRiskAlert(sheet) {
 
 /**
  * 推奨アクションセクション（A42:H55）
+ * Candidates_Masterから直接取得
  */
 function setupRecommendedActions(sheet) {
   // セクションヘッダー
@@ -530,7 +339,7 @@ function setupRecommendedActions(sheet) {
     .setHorizontalAlignment('left');
 
   // ヘッダー行
-  const headers = ['候補者ID', '氏名', '承諾可能性', 'フェーズ', '推奨アクション', '期限', '優先度', '実行状況'];
+  const headers = ['候補者ID', '氏名', '承諾可能性', 'ステータス', '推奨アクション', '期限', '優先度', '実行状況'];
   sheet.getRange('A43:H43').setValues([headers]);
   sheet.getRange('A43:H43')
     .setFontWeight('bold')
@@ -539,10 +348,13 @@ function setupRecommendedActions(sheet) {
     .setHorizontalAlignment('center');
 
   // QUERY関数でアクションが必要な候補者を抽出
-  const query = `=QUERY(Dashboard_Data!A:F,
-    "SELECT A, B, C, D
-     WHERE A IS NOT NULL AND C >= 60 AND C < 80
-     ORDER BY C DESC
+  // A:候補者ID, B:氏名, R:承諾可能性, C:ステータス
+  const query = `=QUERY(Candidates_Master!A:Y,
+    "SELECT A, B, R, C
+     WHERE A IS NOT NULL AND R IS NOT NULL
+       AND R >= 60 AND R < 80
+       AND C<>'辞退' AND C<>'見送り' AND C<>'承諾'
+     ORDER BY R DESC
      LIMIT 10",
     0)`;
 
@@ -550,7 +362,7 @@ function setupRecommendedActions(sheet) {
 
   // E列: 推奨アクション
   sheet.getRange('E44').setFormula(
-    '=IF(D44="初回面談", "社員面談の設定", IF(D44="社員面談", "2次面接への推薦", IF(D44="2次面接", "最終面接への推薦", IF(D44="内定後", "承諾促進アクション", "フォローアップ"))))'
+    '=IF(D44="初回面談", "社員面談の設定", IF(D44="社員面談", "2次面接への推薦", IF(D44="2次面接", "最終面接への推薦", IF(D44="内定通知済", "承諾促進アクション", "次ステップへの推薦"))))'
   );
 
   // F列: 期限
@@ -568,7 +380,7 @@ function setupRecommendedActions(sheet) {
   sheet.setColumnWidth(1, 100);  // A: 候補者ID
   sheet.setColumnWidth(2, 120);  // B: 氏名
   sheet.setColumnWidth(3, 100);  // C: 承諾可能性
-  sheet.setColumnWidth(4, 100);  // D: フェーズ
+  sheet.setColumnWidth(4, 100);  // D: ステータス
   sheet.setColumnWidth(5, 250);  // E: 推奨アクション
   sheet.setColumnWidth(6, 110);  // F: 期限
   sheet.setColumnWidth(7, 80);   // G: 優先度
@@ -586,6 +398,7 @@ function setupRecommendedActions(sheet) {
 
 /**
  * AI予測 vs 人間の直感セクション（A57:E75）
+ * Candidates_Masterから直接取得
  */
 function setupDashboardAIComparison(sheet) {
   // セクションヘッダー
@@ -606,15 +419,22 @@ function setupDashboardAIComparison(sheet) {
     .setFontColor(CONFIG.COLORS.HEADER_TEXT)
     .setHorizontalAlignment('center');
 
-  // QUERY関数でデータを抽出
-  const query = `=QUERY(Dashboard_Data!M:P,
-    "SELECT M, N, O, P
-     WHERE M IS NOT NULL AND O IS NOT NULL
-     ORDER BY P DESC
+  // QUERY関数でCandidates_Masterから取得
+  // A:候補者ID, P:AI予測, Q:人間の直感
+  const query = `=QUERY(Candidates_Master!A:Q,
+    "SELECT A, P, Q
+     WHERE A IS NOT NULL AND P IS NOT NULL AND Q IS NOT NULL
+       AND P > 0 AND Q > 0
+     ORDER BY A
      LIMIT 15",
     0)`;
 
   sheet.getRange('A59').setFormula(query);
+
+  // D列: 乖離計算
+  sheet.getRange('D59').setFormula(
+    '=IF(AND(B59<>"", C59<>""), ABS(B59-C59), "")'
+  );
 
   // E列: 状態判定（閾値を5点と15点に変更）
   sheet.getRange('E59').setFormula(
