@@ -172,10 +172,11 @@ function setupDashboardKPIs(sheet) {
     ['平均承諾可能性', '=ROUND(AVERAGE(Candidates_Master!R:R),1) & "点"'],
     ['高確率候補者数（80点以上）', '=COUNTIF(Candidates_Master!R:R,">=80") & "名"'],
     ['要注意候補者数（60点未満）', '=COUNTIF(Candidates_Master!R:R,"<60") & "名"'],
-    ['本日の新規記録', '=COUNTIF(Engagement_Log!D:D,TODAY()) & "件"']
+    ['本日の新規記録', '=COUNTIF(Engagement_Log!D:D,TODAY()) & "件"'],
+    ['人間の直感入力率', '=TEXT(COUNTIF(Candidates_Master!Q:Q,">0")/(COUNTA(Candidates_Master!A:A)-1),"0%")']
   ];
 
-  sheet.getRange('A5:B9').setValues(kpiData);
+  sheet.getRange('A5:B10').setValues(kpiData);
 
   // 列幅設定
   sheet.setColumnWidth(1, 200); // A: ラベル
@@ -186,13 +187,13 @@ function setupDashboardKPIs(sheet) {
   sheet.setColumnWidth(6, 150); // F
 
   // 書式設定
-  sheet.getRange('A5:A9').setFontWeight('bold');
-  sheet.getRange('B5:B9')
+  sheet.getRange('A5:A10').setFontWeight('bold');
+  sheet.getRange('B5:B10')
     .setFontSize(16)
     .setHorizontalAlignment('right');
 
   // 交互の背景色
-  for (let i = 5; i <= 9; i++) {
+  for (let i = 5; i <= 10; i++) {
     if (i % 2 === 0) {
       sheet.getRange(`A${i}:B${i}`).setBackground('#f9f9f9');
     }
@@ -213,8 +214,8 @@ function setupDashboardRanking(sheet) {
     .setBackground('#f3f3f3')
     .setHorizontalAlignment('left');
 
-  // ヘッダー行
-  const headers = ['順位', '候補者ID', '氏名', '承諾可能性', 'ステータス', '更新日', 'モチベーション', '承諾ストーリー'];
+  // ヘッダー行（承諾可能性（点）に変更）
+  const headers = ['順位', '候補者ID', '氏名', '承諾可能性（点）', 'ステータス', '更新日', 'モチベーション', '承諾ストーリー'];
   sheet.getRange('A12:H12').setValues([headers]);
   sheet.getRange('A12:H12')
     .setFontWeight('bold')
@@ -254,12 +255,12 @@ function setupDashboardRanking(sheet) {
   sheet.setColumnWidth(7, 150);  // G: モチベーション
   sheet.setColumnWidth(8, 300);  // H: 承諾ストーリー
 
-  // 書式設定
+  // 書式設定（点数表記: 小数点1桁）
   sheet.getRange('A13:H27').setBorder(
     true, true, true, true, true, true,
     '#cccccc', SpreadsheetApp.BorderStyle.SOLID
   );
-  sheet.getRange('D13:D27').setNumberFormat('0.00"%"');
+  sheet.getRange('D13:D27').setNumberFormat('0.0');
   sheet.getRange('F13:F27').setNumberFormat('yyyy-mm-dd');
   sheet.getRange('H13:H27').setWrap(true);
 }
@@ -278,8 +279,8 @@ function setupRiskAlert(sheet) {
     .setBackground('#fce5cd')
     .setHorizontalAlignment('left');
 
-  // ヘッダー行
-  const headers = ['候補者ID', '氏名', '承諾可能性', 'ステータス', '更新日', '主要懸念事項', '推奨アクション'];
+  // ヘッダー行（承諾可能性（点）に変更）
+  const headers = ['候補者ID', '氏名', '承諾可能性（点）', 'ステータス', '更新日', '主要懸念事項', '推奨アクション'];
   sheet.getRange('A31:G31').setValues([headers]);
   sheet.getRange('A31:G31')
     .setFontWeight('bold')
@@ -299,9 +300,12 @@ function setupRiskAlert(sheet) {
 
   sheet.getRange('A32').setFormula(query);
 
-  // G列: 推奨アクション
+  // G列: 推奨アクション（承諾可能性に基づいて自動判定）
   sheet.getRange('G32').setFormula(
-    '=IF(C32="", "", "緊急フォローアップ（承諾可能性低下）")'
+    '=IF(C32="", "", ' +
+    'IF(C32<40, "🚨 即時対応: 採用マネージャーとの面談設定", ' +
+    'IF(C32<50, "⚠️ 緊急フォローアップ（承諾可能性低下）", ' +
+    '"📞 電話フォロー: 懸念事項の確認")))'
   );
 
   // 列幅設定
@@ -313,12 +317,12 @@ function setupRiskAlert(sheet) {
   sheet.setColumnWidth(6, 200);  // F: 主要懸念事項
   sheet.setColumnWidth(7, 250);  // G: 推奨アクション
 
-  // 書式設定
+  // 書式設定（点数表記: 小数点1桁）
   sheet.getRange('A32:G39').setBorder(
     true, true, true, true, true, true,
     '#cccccc', SpreadsheetApp.BorderStyle.SOLID
   );
-  sheet.getRange('C32:C39').setNumberFormat('0.00"%"');
+  sheet.getRange('C32:C39').setNumberFormat('0.0');
   sheet.getRange('E32:E39').setNumberFormat('yyyy-mm-dd');
   sheet.getRange('F32:G39').setWrap(true);
   sheet.getRange('A32:G39').setBackground('#fff3cd');
@@ -338,8 +342,8 @@ function setupRecommendedActions(sheet) {
     .setBackground('#d9ead3')
     .setHorizontalAlignment('left');
 
-  // ヘッダー行
-  const headers = ['候補者ID', '氏名', '承諾可能性', 'ステータス', '推奨アクション', '期限', '優先度', '実行状況'];
+  // ヘッダー行（承諾可能性（点）に変更）
+  const headers = ['候補者ID', '氏名', '承諾可能性（点）', 'ステータス', '推奨アクション', '期限', '優先度', '実行状況'];
   sheet.getRange('A43:H43').setValues([headers]);
   sheet.getRange('A43:H43')
     .setFontWeight('bold')
@@ -347,10 +351,10 @@ function setupRecommendedActions(sheet) {
     .setFontColor(CONFIG.COLORS.HEADER_TEXT)
     .setHorizontalAlignment('center');
 
-  // QUERY関数でアクションが必要な候補者を抽出
-  // A:候補者ID, B:氏名, R:承諾可能性, C:ステータス
+  // QUERY関数でアクションが必要な候補者を抽出（重複を防ぐためGROUP BYを使用）
+  // A:候補者ID, B:氏名, R:承諾可能性, C:ステータス, D:最終更新日
   const query = `=QUERY(Candidates_Master!A:Y,
-    "SELECT A, B, R, C
+    "SELECT A, B, R, C, D
      WHERE A IS NOT NULL AND R IS NOT NULL
        AND R >= 60 AND R < 80
        AND C<>'辞退' AND C<>'見送り' AND C<>'承諾'
@@ -360,21 +364,27 @@ function setupRecommendedActions(sheet) {
 
   sheet.getRange('A44').setFormula(query);
 
-  // E列: 推奨アクション
+  // E列: 推奨アクション（ステータスと承諾可能性に基づいて自動判定）
   sheet.getRange('E44').setFormula(
-    '=IF(D44="初回面談", "社員面談の設定", IF(D44="社員面談", "2次面接への推薦", IF(D44="2次面接", "最終面接への推薦", IF(D44="内定通知済", "承諾促進アクション", "次ステップへの推薦"))))'
+    '=IF(A44="", "", ' +
+    'IF(D44="初回面談", "社員面談の設定", ' +
+    'IF(D44="1次面接", "2次面接への推薦", ' +
+    'IF(D44="社員面談", "2次面接への推薦", ' +
+    'IF(D44="2次面接", "最終面接への推薦", ' +
+    'IF(D44="最終面接", "内定手続きの開始", ' +
+    'IF(D44="内定通知済", "承諾促進アクション", "次ステップへの推薦")))))))'
   );
 
-  // F列: 期限
-  sheet.getRange('F44').setFormula('=TODAY()+7');
+  // F列: 期限（最終更新日から7日後）
+  sheet.getRange('F44').setFormula('=IF(E44="", "", E44+7)');
 
-  // G列: 優先度
+  // G列: 優先度（承諾可能性に基づいて自動判定）
   sheet.getRange('G44').setFormula(
-    '=IF(C44>=70, "中", IF(C44>=60, "高", "CRITICAL"))'
+    '=IF(C44="", "", IF(C44>=75, "低", IF(C44>=70, "中", "高")))'
   );
 
   // H列: 実行状況
-  sheet.getRange('H44').setValue('未実行');
+  sheet.getRange('H44:H53').setValue('未実行');
 
   // 列幅設定
   sheet.setColumnWidth(1, 100);  // A: 候補者ID
@@ -386,12 +396,12 @@ function setupRecommendedActions(sheet) {
   sheet.setColumnWidth(7, 80);   // G: 優先度
   sheet.setColumnWidth(8, 100);  // H: 実行状況
 
-  // 書式設定
+  // 書式設定（点数表記: 小数点1桁）
   sheet.getRange('A44:H53').setBorder(
     true, true, true, true, true, true,
     '#cccccc', SpreadsheetApp.BorderStyle.SOLID
   );
-  sheet.getRange('C44:C53').setNumberFormat('0.00"%"');
+  sheet.getRange('C44:C53').setNumberFormat('0.0');
   sheet.getRange('F44:F53').setNumberFormat('yyyy-mm-dd');
   sheet.getRange('E44:E53').setWrap(true);
 }
@@ -410,8 +420,8 @@ function setupDashboardAIComparison(sheet) {
     .setBackground('#f3f3f3')
     .setHorizontalAlignment('left');
 
-  // ヘッダー行
-  const headers = ['候補者ID', 'AI予測', '人間の直感', '乖離', '状態'];
+  // ヘッダー行（点数表記に変更）
+  const headers = ['候補者ID', 'AI予測（点）', '人間の直感（点）', '乖離（点）', '状態'];
   sheet.getRange('A58:E58').setValues([headers]);
   sheet.getRange('A58:E58')
     .setFontWeight('bold')
@@ -443,12 +453,12 @@ function setupDashboardAIComparison(sheet) {
     'IF(D59<=15, "⚠️ やや乖離", "❌ 大きく乖離")))'
   );
 
-  // 書式設定
+  // 書式設定（点数表記: 小数点1桁）
   sheet.getRange('A59:E73').setBorder(
     true, true, true, true, true, true,
     '#cccccc', SpreadsheetApp.BorderStyle.SOLID
   );
-  sheet.getRange('B59:D73').setNumberFormat('0.00"%"');
+  sheet.getRange('B59:D73').setNumberFormat('0.0');
 }
 
 /**
@@ -463,27 +473,29 @@ function setupDashboardConditionalFormats() {
   const rules = [];
 
   // === 候補者ランキング: 承諾可能性のヒートマップ（D13:D27） ===
-  // 氏名追加により列がC→Dに変更
 
-  // 高確率（80点以上）: 緑
+  // Step 1: 色スケール（ヒートマップ）を追加
+  rules.push(
+    SpreadsheetApp.newConditionalFormatRule()
+      .setGradientMaxpointWithValue('#34a853', SpreadsheetApp.InterpolationType.NUMBER, '100')
+      .setGradientMidpointWithValue('#fbbc04', SpreadsheetApp.InterpolationType.NUMBER, '70')
+      .setGradientMinpointWithValue('#ea4335', SpreadsheetApp.InterpolationType.NUMBER, '0')
+      .setRanges([sheet.getRange('D13:D27')])
+      .build()
+  );
+
+  // Step 2: 高確率（80点以上）: 緑背景 + 太字
   rules.push(
     SpreadsheetApp.newConditionalFormatRule()
       .whenNumberGreaterThanOrEqualTo(80)
       .setBackground('#d9ead3')
+      .setFontColor('#38761d')
+      .setBold(true)
       .setRanges([sheet.getRange('D13:D27')])
       .build()
   );
 
-  // 標準（60-79点）: 黄
-  rules.push(
-    SpreadsheetApp.newConditionalFormatRule()
-      .whenNumberBetween(60, 79)
-      .setBackground('#fff2cc')
-      .setRanges([sheet.getRange('D13:D27')])
-      .build()
-  );
-
-  // 要注意（60点未満）: 赤
+  // Step 3: 要注意（60点未満）: 赤背景 + 太字
   rules.push(
     SpreadsheetApp.newConditionalFormatRule()
       .whenNumberLessThan(60)
@@ -491,6 +503,52 @@ function setupDashboardConditionalFormats() {
       .setFontColor('#cc0000')
       .setBold(true)
       .setRanges([sheet.getRange('D13:D27')])
+      .build()
+  );
+
+  // === リスク候補者アラート: 承諾可能性の強調（C32:C39） ===
+
+  // 極めて低い（40点未満）: 濃い赤
+  rules.push(
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberLessThan(40)
+      .setBackground('#cc0000')
+      .setFontColor('#ffffff')
+      .setBold(true)
+      .setRanges([sheet.getRange('C32:C39')])
+      .build()
+  );
+
+  // 低い（40-59点）: 薄い赤
+  rules.push(
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberBetween(40, 59)
+      .setBackground('#f4cccc')
+      .setFontColor('#cc0000')
+      .setBold(true)
+      .setRanges([sheet.getRange('C32:C39')])
+      .build()
+  );
+
+  // === 推奨アクション: 優先度の色分け（G44:G53） ===
+
+  // 優先度「高」: オレンジ
+  rules.push(
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('高')
+      .setBackground('#fce5cd')
+      .setFontColor('#cc0000')
+      .setBold(true)
+      .setRanges([sheet.getRange('G44:G53')])
+      .build()
+  );
+
+  // 優先度「中」: 黄色
+  rules.push(
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('中')
+      .setBackground('#fff2cc')
+      .setRanges([sheet.getRange('G44:G53')])
       .build()
   );
 
@@ -503,6 +561,15 @@ function setupDashboardConditionalFormats() {
       .setBackground('#fce5cd')
       .setFontColor('#cc0000')
       .setBold(true)
+      .setRanges([sheet.getRange('D59:D73')])
+      .build()
+  );
+
+  // やや乖離（5-15点）: 黄色
+  rules.push(
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberBetween(5, 15)
+      .setBackground('#fff2cc')
       .setRanges([sheet.getRange('D59:D73')])
       .build()
   );
