@@ -5,6 +5,7 @@ const CONFIG = {
   // シート名の定義
   SHEET_NAMES: {
     DASHBOARD: 'Dashboard',
+    DASHBOARD_DATA: 'Dashboard_Data', // Phase 4-1: ダッシュボード中間データ
     CANDIDATES_MASTER: 'Candidates_Master',
     COMPANY_ASSETS: 'Company_Assets',
     COMPETITOR_DB: 'Competitor_DB',
