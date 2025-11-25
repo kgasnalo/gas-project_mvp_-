@@ -78,7 +78,9 @@ function setupDashboardDataSheet() {
   // シートをEngagement_Logの後ろに移動
   const engagementSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.ENGAGEMENT_LOG);
   if (engagementSheet) {
-    sheet.moveAfter(engagementSheet);
+    const engagementIndex = engagementSheet.getIndex();
+    ss.setActiveSheet(sheet);
+    ss.moveActiveSheet(engagementIndex + 1);
   }
 
   // === セクション1: 最新承諾可能性（A1:E100） ===
