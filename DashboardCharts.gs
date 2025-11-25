@@ -81,32 +81,52 @@ function createCandidateBarChart(sheet) {
 }
 
 /**
- * 2. フェーズ別人数分布（棒グラフ）
+ * 2. ステータス別人数分布（棒グラフ）
  *
  * 配置: J29:N43
- * フェーズごとの候補者数を表示
+ * ステータスごとの候補者数を表示
  */
 function createPhaseLineChart(sheet) {
-  Logger.log('  📊 フェーズ別人数分布（棒グラフ）を作成中...');
+  Logger.log('  📊 ステータス別人数分布（棒グラフ）を作成中...');
 
-  const dataSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Dashboard_Data');
-  if (!dataSheet) {
-    Logger.log('  ⚠️ Dashboard_Dataシートが見つかりません');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const candidatesMaster = ss.getSheetByName('Candidates_Master');
+  if (!candidatesMaster) {
+    Logger.log('  ⚠️ Candidates_Masterシートが見つかりません');
     return;
   }
 
-  // データ範囲: Dashboard_Data!G2:H10（フェーズと人数）
-  const dataRange = dataSheet.getRange('G2:H10');
+  // Candidates_MasterのステータスをQUERYで集計
+  // 一時的なデータ範囲をDashboardシートに作成
+  const tempDataRange = sheet.getRange('P29:Q40');
+  tempDataRange.clearContent();
+
+  // ヘッダー
+  sheet.getRange('P29').setValue('ステータス');
+  sheet.getRange('Q29').setValue('人数');
+
+  // QUERYで集計
+  sheet.getRange('P30').setFormula(
+    '=QUERY(Candidates_Master!C:C, ' +
+    '"SELECT C, COUNT(C) ' +
+    'WHERE C IS NOT NULL ' +
+    'GROUP BY C ' +
+    'ORDER BY COUNT(C) DESC", 1)'
+  );
+
+  // データ範囲を取得
+  SpreadsheetApp.flush(); // 数式を先に実行
+  const dataRange = sheet.getRange('P29:Q40');
 
   const chart = sheet.newChart()
     .setChartType(Charts.ChartType.COLUMN)
     .addRange(dataRange)
     .setPosition(29, 10, 0, 0) // J29セル
-    .setOption('title', 'フェーズ別候補者数')
+    .setOption('title', 'ステータス別候補者数')
     .setOption('width', 500)
     .setOption('height', 350)
     .setOption('hAxis', {
-      title: 'フェーズ',
+      title: 'ステータス',
       slantedText: true,
       slantedTextAngle: 45
     })
@@ -130,18 +150,14 @@ function createPhaseLineChart(sheet) {
  * 3. AI予測 vs 人間の直感（散布図）
  *
  * 配置: J45:N60
+ * Candidates_Masterから直接取得
  */
 function createAIvsHumanScatterChart(sheet) {
   Logger.log('  📊 AI予測 vs 人間の直感（散布図）を作成中...');
 
-  const dataSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Dashboard_Data');
-  if (!dataSheet) {
-    Logger.log('  ⚠️ Dashboard_Dataシートが見つかりません');
-    return;
-  }
-
-  // データ範囲: Dashboard_Data!N2:O20（AI予測と人間の直感）
-  const dataRange = dataSheet.getRange('N2:O20');
+  // Dashboardシートに一時データを作成（A59:C73のデータを使用）
+  // setupDashboardAIComparison()で既に作成されているデータを利用
+  const dataRange = sheet.getRange('B59:C73');
 
   const chart = sheet.newChart()
     .setChartType(Charts.ChartType.SCATTER)
@@ -184,27 +200,41 @@ function createAIvsHumanScatterChart(sheet) {
 }
 
 /**
- * 4. 候補者ステータス分布（円グラフ）
+ * 4. 承諾可能性分布（円グラフ）
  *
  * 配置: J62:N75
+ * Candidates_Masterから直接集計
  */
 function createStatusPieChart(sheet) {
-  Logger.log('  📊 候補者ステータス分布（円グラフ）を作成中...');
+  Logger.log('  📊 承諾可能性分布（円グラフ）を作成中...');
 
-  const dataSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Dashboard_Data');
-  if (!dataSheet) {
-    Logger.log('  ⚠️ Dashboard_Dataシートが見つかりません');
-    return;
-  }
+  // 一時データ範囲をDashboardシートに作成
+  const tempDataRange = sheet.getRange('P62:Q66');
+  tempDataRange.clearContent();
 
-  // データ範囲: Dashboard_Data!U2:V5（ステータスと人数）
-  const dataRange = dataSheet.getRange('U2:V5');
+  // ヘッダー
+  sheet.getRange('P62').setValue('ステータス');
+  sheet.getRange('Q62').setValue('人数');
+
+  // データ行（承諾可能性の分布）
+  const data = [
+    ['高確率（80点以上）', '=COUNTIF(Candidates_Master!R:R,">=80")'],
+    ['やや高（70-79点）', '=COUNTIFS(Candidates_Master!R:R,">=70",Candidates_Master!R:R,"<80")'],
+    ['標準（60-69点）', '=COUNTIFS(Candidates_Master!R:R,">=60",Candidates_Master!R:R,"<70")'],
+    ['要注意（60点未満）', '=COUNTIF(Candidates_Master!R:R,"<60")']
+  ];
+
+  sheet.getRange('P63:Q66').setValues(data);
+
+  // データ範囲を取得
+  SpreadsheetApp.flush(); // 数式を先に実行
+  const dataRange = sheet.getRange('P62:Q66');
 
   const chart = sheet.newChart()
     .setChartType(Charts.ChartType.PIE)
     .addRange(dataRange)
     .setPosition(62, 10, 0, 0) // J62セル
-    .setOption('title', '候補者ステータス分布')
+    .setOption('title', '承諾可能性分布')
     .setOption('width', 500)
     .setOption('height', 300)
     .setOption('is3D', false)
