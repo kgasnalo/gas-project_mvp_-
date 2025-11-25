@@ -40,14 +40,19 @@ function setupDashboardPhase4() {
     Logger.log('✅ ダッシュボードセットアップ完了');
     Logger.log('====================================');
 
-    // 完了メッセージ
-    SpreadsheetApp.getUi().alert(
-      '✅ ダッシュボードセットアップ完了\n\n' +
-      '以下のシートが作成されました:\n' +
-      '- Dashboard_Data (中間データ)\n' +
-      '- Dashboard (メインダッシュボード)\n\n' +
-      'Dashboardシートを開いてください。'
-    );
+    // 完了メッセージ（UIコンテキストがある場合のみ表示）
+    try {
+      SpreadsheetApp.getUi().alert(
+        '✅ ダッシュボードセットアップ完了\n\n' +
+        '以下のシートが作成されました:\n' +
+        '- Dashboard_Data (中間データ)\n' +
+        '- Dashboard (メインダッシュボード)\n\n' +
+        'Dashboardシートを開いてください。'
+      );
+    } catch (uiError) {
+      // スクリプトエディタから実行した場合はUIが利用できないため、ログのみ
+      Logger.log('💡 Dashboardシートを開いて確認してください。');
+    }
 
   } catch (error) {
     Logger.log('❌ エラー: ' + error.toString());
