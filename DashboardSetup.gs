@@ -351,10 +351,10 @@ function setupRecommendedActions(sheet) {
     .setFontColor(CONFIG.COLORS.HEADER_TEXT)
     .setHorizontalAlignment('center');
 
-  // QUERY関数でアクションが必要な候補者を抽出（重複を防ぐためGROUP BYを使用）
-  // A:候補者ID, B:氏名, R:承諾可能性, C:ステータス, D:最終更新日
+  // QUERY関数でアクションが必要な候補者を抽出（4列のみ）
+  // A:候補者ID, B:氏名, R:承諾可能性, C:ステータス
   const query = `=QUERY(Candidates_Master!A:Y,
-    "SELECT A, B, R, C, D
+    "SELECT A, B, R, C
      WHERE A IS NOT NULL AND R IS NOT NULL
        AND R >= 60 AND R < 80
        AND C<>'辞退' AND C<>'見送り' AND C<>'承諾'
@@ -375,8 +375,8 @@ function setupRecommendedActions(sheet) {
     'IF(D44="内定通知済", "承諾促進アクション", "次ステップへの推薦")))))))'
   );
 
-  // F列: 期限（最終更新日から7日後）
-  sheet.getRange('F44').setFormula('=IF(E44="", "", E44+7)');
+  // F列: 期限（今日から7日後）
+  sheet.getRange('F44').setFormula('=IF(A44="", "", TODAY()+7)');
 
   // G列: 優先度（承諾可能性に基づいて自動判定）
   sheet.getRange('G44').setFormula(
@@ -577,4 +577,155 @@ function setupDashboardConditionalFormats() {
   sheet.setConditionalFormatRules(rules);
 
   Logger.log('✅ 条件付き書式設定完了');
+}
+
+/**
+ * 列番号をアルファベットに変換（例: 1→A, 27→AA）
+ */
+function columnToLetter(column) {
+  let temp, letter = '';
+  while (column > 0) {
+    temp = (column - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    column = (column - temp - 1) / 26;
+  }
+  return letter;
+}
+
+/**
+ * 現在ステータス列のアルファベットを取得
+ */
+function findStatusColumnLetter() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const master = ss.getSheetByName('Candidates_Master');
+
+  if (!master) {
+    Logger.log('❌ Candidates_Masterシートが見つかりません');
+    return null;
+  }
+
+  const headers = master.getRange(1, 1, 1, master.getLastColumn()).getValues()[0];
+
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i].toString().trim();
+    if (header === '現在ステータス' ||
+        header === 'ステータス' ||
+        header === '選考ステータス' ||
+        header === '現在のステータス') {
+      return columnToLetter(i + 1);
+    }
+  }
+
+  Logger.log('❌ 現在ステータス列が見つかりません');
+  return null;
+}
+
+/**
+ * 現在ステータス列を特定してログに出力（デバッグ用）
+ */
+function findStatusColumn() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const master = ss.getSheetByName('Candidates_Master');
+
+  if (!master) {
+    Logger.log('❌ Candidates_Masterシートが見つかりません');
+    return;
+  }
+
+  const headers = master.getRange(1, 1, 1, master.getLastColumn()).getValues()[0];
+
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i].toString().trim();
+    if (header === '現在ステータス' ||
+        header === 'ステータス' ||
+        header === '選考ステータス' ||
+        header === '現在のステータス') {
+      const columnLetter = columnToLetter(i + 1);
+      Logger.log(`✅ 現在ステータス列: ${columnLetter}列（${i + 1}列目）`);
+      Logger.log(`📝 COUNTIF関数: =COUNTIF(Candidates_Master!${columnLetter}:${columnLetter},"初回面談")`);
+      return columnLetter;
+    }
+  }
+
+  Logger.log('❌ 現在ステータス列が見つかりません');
+  Logger.log('📋 全ヘッダー一覧:');
+  headers.forEach((h, i) => Logger.log(`  ${columnToLetter(i+1)}列: ${h}`));
+}
+
+/**
+ * ステータス別候補者数のデータを確実に作成
+ * Dashboard_DataシートのU1:V6にステータス別人数を作成
+ */
+function fixStatusChart() {
+  Logger.log('====================================');
+  Logger.log('🔧 ステータス別グラフデータ修正開始');
+  Logger.log('====================================');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Dashboard_Dataシートを取得（なければ作成）
+  let dataSheet = ss.getSheetByName('Dashboard_Data');
+  if (!dataSheet) {
+    Logger.log('📝 Dashboard_Dataシートを新規作成中...');
+    dataSheet = ss.insertSheet('Dashboard_Data');
+
+    // Engagement_Logの後ろに配置
+    const engagementSheet = ss.getSheetByName('Engagement_Log');
+    if (engagementSheet) {
+      const engagementIndex = engagementSheet.getIndex();
+      ss.setActiveSheet(dataSheet);
+      ss.moveActiveSheet(engagementIndex + 1);
+    }
+  }
+
+  // 現在ステータス列を特定
+  const statusColumn = findStatusColumnLetter();
+
+  if (!statusColumn) {
+    throw new Error('❌ 現在ステータス列が見つかりません。Candidates_Masterシートのヘッダーを確認してください。');
+  }
+
+  Logger.log(`✅ 現在ステータス列を特定: ${statusColumn}列`);
+
+  // ステータスの固定順序
+  const statusOrder = ['初回面談', '1次面接', '社員面談', '2次面接', '最終面接'];
+
+  // U1:V6の範囲をクリア
+  dataSheet.getRange('U1:V6').clearContent();
+
+  // ヘッダー行
+  dataSheet.getRange('U1').setValue('ステータス');
+  dataSheet.getRange('V1').setValue('人数');
+  dataSheet.getRange('U1:V1')
+    .setFontWeight('bold')
+    .setBackground('#4285f4')
+    .setFontColor('#ffffff');
+
+  Logger.log('📝 ステータス別データを作成中...');
+
+  // データ行
+  statusOrder.forEach((status, index) => {
+    const row = index + 2;
+    dataSheet.getRange(`U${row}`).setValue(status);
+    dataSheet.getRange(`V${row}`).setFormula(
+      `=COUNTIF(Candidates_Master!${statusColumn}:${statusColumn},"${status}")`
+    );
+    Logger.log(`  ✓ ${status}: =COUNTIF(Candidates_Master!${statusColumn}:${statusColumn},"${status}")`);
+  });
+
+  // 列幅設定
+  dataSheet.setColumnWidth(21, 120); // U列: ステータス
+  dataSheet.setColumnWidth(22, 80);  // V列: 人数
+
+  Logger.log('====================================');
+  Logger.log('✅ ステータス別データを U1:V6 に作成完了');
+  Logger.log('====================================');
+  Logger.log('');
+  Logger.log('📋 次の手順（手動作業）:');
+  Logger.log('1. Dashboardシートを開く');
+  Logger.log('2. ステータス別候補者数のグラフをクリック');
+  Logger.log('3. 右上の「︙」→「グラフを編集」');
+  Logger.log('4. データ範囲を「Dashboard_Data!U1:V6」に変更');
+  Logger.log('5. 「更新」をクリック');
+  Logger.log('');
 }
