@@ -45,20 +45,21 @@ function setupDashboardCharts() {
 /**
  * 1. 候補者別承諾可能性（棒グラフ）
  *
- * 配置: H11:M25
+ * 配置: J11:N25
+ * 氏名と承諾可能性を表示
  */
 function createCandidateBarChart(sheet) {
   Logger.log('  📊 候補者別承諾可能性（棒グラフ）を作成中...');
 
-  // データ範囲: B13:C27（候補者IDと承諾可能性）
-  const dataRange = sheet.getRange('B13:C27');
+  // データ範囲: C13:D27（氏名と承諾可能性）
+  const dataRange = sheet.getRange('C13:D27');
 
   const chart = sheet.newChart()
     .setChartType(Charts.ChartType.BAR)
     .addRange(dataRange)
-    .setPosition(11, 8, 0, 0) // H11セル
+    .setPosition(11, 10, 0, 0) // J11セル
     .setOption('title', '候補者別承諾可能性')
-    .setOption('width', 600)
+    .setOption('width', 500)
     .setOption('height', 400)
     .setOption('hAxis', {
       title: '承諾可能性（%）',
@@ -67,11 +68,11 @@ function createCandidateBarChart(sheet) {
       format: '0"%"'
     })
     .setOption('vAxis', {
-      title: '候補者ID'
+      title: '候補者名'
     })
     .setOption('colors', ['#4285f4'])
     .setOption('legend', { position: 'none' })
-    .setOption('chartArea', { width: '70%', height: '80%' })
+    .setOption('chartArea', { width: '65%', height: '85%' })
     .build();
 
   sheet.insertChart(chart);
@@ -80,12 +81,13 @@ function createCandidateBarChart(sheet) {
 }
 
 /**
- * 2. フェーズ別スコア推移（折れ線グラフ）
+ * 2. フェーズ別人数分布（棒グラフ）
  *
- * 配置: H27:M45
+ * 配置: J29:N43
+ * フェーズごとの候補者数を表示
  */
 function createPhaseLineChart(sheet) {
-  Logger.log('  📊 フェーズ別スコア推移（折れ線グラフ）を作成中...');
+  Logger.log('  📊 フェーズ別人数分布（棒グラフ）を作成中...');
 
   const dataSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Dashboard_Data');
   if (!dataSheet) {
@@ -93,47 +95,41 @@ function createPhaseLineChart(sheet) {
     return;
   }
 
-  // データ範囲: Dashboard_Data!G2:K6（候補者5名のフェーズ別スコア）
-  const dataRange = dataSheet.getRange('G2:K6');
+  // データ範囲: Dashboard_Data!G2:H10（フェーズと人数）
+  const dataRange = dataSheet.getRange('G2:H10');
 
   const chart = sheet.newChart()
-    .setChartType(Charts.ChartType.LINE)
+    .setChartType(Charts.ChartType.COLUMN)
     .addRange(dataRange)
-    .setPosition(27, 8, 0, 0) // H27セル
-    .setOption('title', 'フェーズ別スコア推移')
-    .setOption('width', 600)
-    .setOption('height', 400)
-    .setOption('curveType', 'function') // 滑らかな曲線
+    .setPosition(29, 10, 0, 0) // J29セル
+    .setOption('title', 'フェーズ別候補者数')
+    .setOption('width', 500)
+    .setOption('height', 350)
     .setOption('hAxis', {
       title: 'フェーズ',
-      slantedText: false
+      slantedText: true,
+      slantedTextAngle: 45
     })
     .setOption('vAxis', {
-      title: '承諾可能性（%）',
+      title: '候補者数（人）',
       minValue: 0,
-      maxValue: 100,
-      format: '0"%"'
+      format: '0'
     })
-    .setOption('legend', { position: 'bottom' })
-    .setOption('chartArea', { width: '80%', height: '70%' })
-    .setOption('series', {
-      0: { color: '#4285f4' },
-      1: { color: '#ea4335' },
-      2: { color: '#fbbc04' },
-      3: { color: '#34a853' },
-      4: { color: '#9c27b0' }
-    })
+    .setOption('colors', ['#34a853'])
+    .setOption('legend', { position: 'none' })
+    .setOption('chartArea', { width: '75%', height: '65%' })
+    .setOption('bar', { groupWidth: '70%' })
     .build();
 
   sheet.insertChart(chart);
 
-  Logger.log('  ✅ 折れ線グラフ作成完了');
+  Logger.log('  ✅ 棒グラフ作成完了');
 }
 
 /**
  * 3. AI予測 vs 人間の直感（散布図）
  *
- * 配置: H47:M65
+ * 配置: J45:N60
  */
 function createAIvsHumanScatterChart(sheet) {
   Logger.log('  📊 AI予測 vs 人間の直感（散布図）を作成中...');
@@ -150,10 +146,10 @@ function createAIvsHumanScatterChart(sheet) {
   const chart = sheet.newChart()
     .setChartType(Charts.ChartType.SCATTER)
     .addRange(dataRange)
-    .setPosition(47, 8, 0, 0) // H47セル
+    .setPosition(45, 10, 0, 0) // J45セル
     .setOption('title', 'AI予測 vs 人間の直感')
-    .setOption('width', 600)
-    .setOption('height', 400)
+    .setOption('width', 500)
+    .setOption('height', 350)
     .setOption('hAxis', {
       title: 'AI予測（%）',
       minValue: 0,
@@ -167,7 +163,7 @@ function createAIvsHumanScatterChart(sheet) {
       format: '0"%"'
     })
     .setOption('legend', { position: 'none' })
-    .setOption('chartArea', { width: '75%', height: '75%' })
+    .setOption('chartArea', { width: '70%', height: '70%' })
     .setOption('pointSize', 5)
     .setOption('colors', ['#4285f4'])
     .setOption('trendlines', {
@@ -190,7 +186,7 @@ function createAIvsHumanScatterChart(sheet) {
 /**
  * 4. 候補者ステータス分布（円グラフ）
  *
- * 配置: A52:F65
+ * 配置: J62:N75
  */
 function createStatusPieChart(sheet) {
   Logger.log('  📊 候補者ステータス分布（円グラフ）を作成中...');
@@ -207,10 +203,10 @@ function createStatusPieChart(sheet) {
   const chart = sheet.newChart()
     .setChartType(Charts.ChartType.PIE)
     .addRange(dataRange)
-    .setPosition(52, 1, 0, 0) // A52セル
+    .setPosition(62, 10, 0, 0) // J62セル
     .setOption('title', '候補者ステータス分布')
-    .setOption('width', 600)
-    .setOption('height', 350)
+    .setOption('width', 500)
+    .setOption('height', 300)
     .setOption('is3D', false)
     .setOption('pieHole', 0.4) // ドーナツグラフ
     .setOption('legend', { position: 'right' })
@@ -223,7 +219,7 @@ function createStatusPieChart(sheet) {
     })
     .setOption('pieSliceText', 'percentage')
     .setOption('pieSliceTextStyle', {
-      fontSize: 14,
+      fontSize: 12,
       bold: true
     })
     .build();

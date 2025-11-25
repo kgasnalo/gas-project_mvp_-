@@ -107,92 +107,75 @@ function setupDashboardDataSheet() {
 }
 
 /**
- * セクション1: 最新承諾可能性データ（A1:E100）
+ * セクション1: 最新承諾可能性データ（A1:F100）
+ * 氏名列を追加
  */
 function setupLatestAcceptanceData(sheet) {
-  // ヘッダー行
-  const headers = ['候補者ID', '最新承諾可能性', '最新フェーズ', '最終更新日', 'コアモチベーション'];
-  sheet.getRange('A1:E1').setValues([headers]);
-  sheet.getRange('A1:E1')
+  // ヘッダー行（氏名を追加）
+  const headers = ['候補者ID', '氏名', '最新承諾可能性', '最新フェーズ', '最終更新日', 'コアモチベーション'];
+  sheet.getRange('A1:F1').setValues([headers]);
+  sheet.getRange('A1:F1')
     .setFontWeight('bold')
     .setBackground(CONFIG.COLORS.HEADER_BG)
     .setFontColor(CONFIG.COLORS.HEADER_TEXT);
 
   // QUERY関数（候補者別最新承諾可能性）
   // Engagement_Logから最新データを取得し、承諾可能性順にソート
+  // 氏名を追加（C列）
   const query = `=QUERY(Engagement_Log!A:U,
-    "SELECT B, MAX(H), E, MAX(D), M
+    "SELECT B, C, MAX(H), E, MAX(D), M
      WHERE B IS NOT NULL
-     GROUP BY B, E, M
+     GROUP BY B, C, E, M
      ORDER BY MAX(H) DESC
-     LABEL B '候補者ID', MAX(H) '最新承諾可能性', E '最新フェーズ', MAX(D) '最終更新日', M 'コアモチベーション'",
+     LABEL B '候補者ID', C '氏名', MAX(H) '最新承諾可能性', E '最新フェーズ', MAX(D) '最終更新日', M 'コアモチベーション'",
     1)`;
 
   sheet.getRange('A2').setFormula(query);
 
   // 列幅設定
   sheet.setColumnWidth(1, 120); // A: 候補者ID
-  sheet.setColumnWidth(2, 150); // B: 最新承諾可能性
-  sheet.setColumnWidth(3, 120); // C: 最新フェーズ
-  sheet.setColumnWidth(4, 140); // D: 最終更新日
-  sheet.setColumnWidth(5, 200); // E: コアモチベーション
+  sheet.setColumnWidth(2, 120); // B: 氏名
+  sheet.setColumnWidth(3, 150); // C: 最新承諾可能性
+  sheet.setColumnWidth(4, 120); // D: 最新フェーズ
+  sheet.setColumnWidth(5, 140); // E: 最終更新日
+  sheet.setColumnWidth(6, 200); // F: コアモチベーション
 
   // フォーマット設定
-  sheet.getRange('B2:B100').setNumberFormat('0.00"%"');
-  sheet.getRange('D2:D100').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('C2:C100').setNumberFormat('0.00"%"');
+  sheet.getRange('E2:E100').setNumberFormat('yyyy-mm-dd');
 }
 
 /**
- * セクション2: フェーズ別スコア推移データ（G1:K100）
+ * セクション2: フェーズ別人数分布データ（G1:H10）
  *
- * 各候補者のフェーズごとの承諾可能性を集計します。
+ * 各フェーズの候補者数を集計します。
  */
 function setupPhaseScoreData(sheet) {
   // ヘッダー行
-  const headers = ['候補者ID', '初回面談', '社員面談', '2次面接', '内定後'];
-  sheet.getRange('G1:K1').setValues([headers]);
-  sheet.getRange('G1:K1')
+  const headers = ['フェーズ', '人数'];
+  sheet.getRange('G1:H1').setValues([headers]);
+  sheet.getRange('G1:H1')
     .setFontWeight('bold')
     .setBackground(CONFIG.COLORS.HEADER_BG)
     .setFontColor(CONFIG.COLORS.HEADER_TEXT);
 
-  // 候補者IDリストを取得（UNIQUE関数）
-  sheet.getRange('G2').setFormula('=UNIQUE(Engagement_Log!B2:B)');
+  // QUERY関数でフェーズごとの人数を集計
+  const query = `=QUERY(Engagement_Log!E:E,
+    "SELECT E, COUNT(E)
+     WHERE E IS NOT NULL
+     GROUP BY E
+     ORDER BY COUNT(E) DESC
+     LABEL E 'フェーズ', COUNT(E) '人数'",
+    1)`;
 
-  // 各フェーズの最大承諾可能性を取得
-  // H列: 初回面談
-  sheet.getRange('H2').setFormula(
-    '=IFERROR(QUERY(Engagement_Log!B:H, ' +
-    '"SELECT MAX(H) WHERE B=\'" & G2 & "\' AND E=\'初回面談\' GROUP BY B LABEL MAX(H) \'\'", 0), "")'
-  );
-
-  // I列: 社員面談
-  sheet.getRange('I2').setFormula(
-    '=IFERROR(QUERY(Engagement_Log!B:H, ' +
-    '"SELECT MAX(H) WHERE B=\'" & G2 & "\' AND E=\'社員面談\' GROUP BY B LABEL MAX(H) \'\'", 0), "")'
-  );
-
-  // J列: 2次面接
-  sheet.getRange('J2').setFormula(
-    '=IFERROR(QUERY(Engagement_Log!B:H, ' +
-    '"SELECT MAX(H) WHERE B=\'" & G2 & "\' AND E=\'2次面接\' GROUP BY B LABEL MAX(H) \'\'", 0), "")'
-  );
-
-  // K列: 内定後
-  sheet.getRange('K2').setFormula(
-    '=IFERROR(QUERY(Engagement_Log!B:H, ' +
-    '"SELECT MAX(H) WHERE B=\'" & G2 & "\' AND E=\'内定後\' GROUP BY B LABEL MAX(H) \'\'", 0), "")'
-  );
+  sheet.getRange('G2').setFormula(query);
 
   // 列幅設定
-  sheet.setColumnWidth(7, 120);  // G: 候補者ID
-  sheet.setColumnWidth(8, 100);  // H: 初回面談
-  sheet.setColumnWidth(9, 100);  // I: 社員面談
-  sheet.setColumnWidth(10, 100); // J: 2次面接
-  sheet.setColumnWidth(11, 100); // K: 内定後
+  sheet.setColumnWidth(7, 120);  // G: フェーズ
+  sheet.setColumnWidth(8, 80);   // H: 人数
 
   // フォーマット設定
-  sheet.getRange('H2:K100').setNumberFormat('0.00"%"');
+  sheet.getRange('H2:H10').setNumberFormat('0');
 }
 
 /**
@@ -315,20 +298,23 @@ function setupDashboardSheet() {
   sheet.activate();
   ss.moveActiveSheet(1);
 
-  // === ヘッダーセクション（A1:F2） ===
+  // === ヘッダーセクション（A1:H2） ===
   setupDashboardHeader(sheet);
 
-  // === KPIサマリーセクション（A4:F9） ===
+  // === KPIサマリーセクション（A4:H9） ===
   setupDashboardKPIs(sheet);
 
-  // === 候補者ランキングセクション（A11:F30） ===
+  // === 候補者ランキングセクション（A11:H28） ===
   setupDashboardRanking(sheet);
 
-  // === AI予測 vs 人間の直感セクション（A32:E50） ===
-  setupDashboardAIComparison(sheet);
+  // === リスク候補者アラート（A30:H40） ===
+  setupRiskAlert(sheet);
 
-  // === 候補者ステータス分布（A52:F65） ===
-  // ※チャート作成は別関数で実装
+  // === 推奨アクション（A42:H55） ===
+  setupRecommendedActions(sheet);
+
+  // === AI予測 vs 人間の直感セクション（A57:E75） ===
+  setupDashboardAIComparison(sheet);
 
   Logger.log('✅ Dashboardシート作成完了');
 }
@@ -405,22 +391,23 @@ function setupDashboardKPIs(sheet) {
 }
 
 /**
- * 候補者ランキングセクション（A11:F30）
+ * 候補者ランキングセクション（A11:H30）
+ * 氏名と承諾ストーリーを追加
  */
 function setupDashboardRanking(sheet) {
   // セクションヘッダー
   sheet.getRange('A11').setValue('【候補者別承諾可能性ランキング】');
-  sheet.getRange('A11:F11').merge();
+  sheet.getRange('A11:H11').merge();
   sheet.getRange('A11')
     .setFontSize(14)
     .setFontWeight('bold')
     .setBackground('#f3f3f3')
     .setHorizontalAlignment('left');
 
-  // ヘッダー行
-  const headers = ['順位', '候補者ID', '承諾可能性', 'フェーズ', '更新日', 'モチベーション'];
-  sheet.getRange('A12:F12').setValues([headers]);
-  sheet.getRange('A12:F12')
+  // ヘッダー行（氏名と承諾ストーリーを追加）
+  const headers = ['順位', '候補者ID', '氏名', '承諾可能性', 'フェーズ', '更新日', 'モチベーション', '承諾ストーリー'];
+  sheet.getRange('A12:H12').setValues([headers]);
+  sheet.getRange('A12:H12')
     .setFontWeight('bold')
     .setBackground(CONFIG.COLORS.HEADER_BG)
     .setFontColor(CONFIG.COLORS.HEADER_TEXT)
@@ -431,33 +418,180 @@ function setupDashboardRanking(sheet) {
     sheet.getRange(`A${12 + i}`).setValue(i);
   }
 
-  // QUERY関数でデータを抽出
-  const query = `=QUERY(Dashboard_Data!A:E,
-    "SELECT A, B, C, D, E
+  // QUERY関数でデータを抽出（Dashboard_Dataから）
+  // 列順: A:候補者ID, B:氏名, C:承諾可能性, D:フェーズ, E:更新日, F:モチベーション
+  const query = `=QUERY(Dashboard_Data!A:F,
+    "SELECT A, B, C, D, E, F
      WHERE A IS NOT NULL
-     ORDER BY B DESC
+     ORDER BY C DESC
      LIMIT 15",
     0)`;
 
   sheet.getRange('B13').setFormula(query);
 
+  // H列: 承諾ストーリー（Acceptance_Storyシートから取得）
+  sheet.getRange('H13').setFormula(
+    '=IFERROR(VLOOKUP(B13, Acceptance_Story!A:D, 4, FALSE), "未作成")'
+  );
+
+  // 列幅設定
+  sheet.setColumnWidth(1, 50);   // A: 順位
+  sheet.setColumnWidth(2, 100);  // B: 候補者ID
+  sheet.setColumnWidth(3, 120);  // C: 氏名
+  sheet.setColumnWidth(4, 120);  // D: 承諾可能性
+  sheet.setColumnWidth(5, 100);  // E: フェーズ
+  sheet.setColumnWidth(6, 110);  // F: 更新日
+  sheet.setColumnWidth(7, 150);  // G: モチベーション
+  sheet.setColumnWidth(8, 300);  // H: 承諾ストーリー
+
   // 書式設定
-  sheet.getRange('A13:F27').setBorder(
+  sheet.getRange('A13:H27').setBorder(
     true, true, true, true, true, true,
     '#cccccc', SpreadsheetApp.BorderStyle.SOLID
   );
-  sheet.getRange('C13:C27').setNumberFormat('0.00"%"');
-  sheet.getRange('E13:E27').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('D13:D27').setNumberFormat('0.00"%"');
+  sheet.getRange('F13:F27').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('H13:H27').setWrap(true);
 }
 
 /**
- * AI予測 vs 人間の直感セクション（A32:E50）
+ * リスク候補者アラートセクション（A30:H40）
+ */
+function setupRiskAlert(sheet) {
+  // セクションヘッダー
+  sheet.getRange('A30').setValue('【⚠️ リスク候補者アラート】');
+  sheet.getRange('A30:H30').merge();
+  sheet.getRange('A30')
+    .setFontSize(14)
+    .setFontWeight('bold')
+    .setBackground('#fce5cd')
+    .setHorizontalAlignment('left');
+
+  // ヘッダー行
+  const headers = ['候補者ID', '氏名', '承諾可能性', 'フェーズ', '更新日', 'リスク内容', '推奨アクション'];
+  sheet.getRange('A31:G31').setValues([headers]);
+  sheet.getRange('A31:G31')
+    .setFontWeight('bold')
+    .setBackground(CONFIG.COLORS.CRITICAL)
+    .setFontColor(CONFIG.COLORS.HEADER_TEXT)
+    .setHorizontalAlignment('center');
+
+  // QUERY関数でリスク候補者（承諾可能性60点未満）を抽出
+  const query = `=QUERY(Dashboard_Data!A:F,
+    "SELECT A, B, C, D, E
+     WHERE A IS NOT NULL AND C < 60
+     ORDER BY C ASC
+     LIMIT 8",
+    0)`;
+
+  sheet.getRange('A32').setFormula(query);
+
+  // G列: リスク内容（リスクシートから取得）
+  sheet.getRange('F32').setFormula(
+    '=IFERROR(QUERY(Risk!B:F, "SELECT F WHERE B=\'"&A32&"\' ORDER BY H DESC LIMIT 1", 0), "データなし")'
+  );
+
+  // H列: 推奨アクション（Engagement_Logから取得）
+  sheet.getRange('G32').setFormula(
+    '=IFERROR(QUERY(Engagement_Log!B:R, "SELECT R WHERE B=\'"&A32&"\' ORDER BY D DESC LIMIT 1", 0), "要検討")'
+  );
+
+  // 列幅設定
+  sheet.setColumnWidth(1, 100);  // A: 候補者ID
+  sheet.setColumnWidth(2, 120);  // B: 氏名
+  sheet.setColumnWidth(3, 100);  // C: 承諾可能性
+  sheet.setColumnWidth(4, 100);  // D: フェーズ
+  sheet.setColumnWidth(5, 110);  // E: 更新日
+  sheet.setColumnWidth(6, 200);  // F: リスク内容
+  sheet.setColumnWidth(7, 250);  // G: 推奨アクション
+
+  // 書式設定
+  sheet.getRange('A32:G39').setBorder(
+    true, true, true, true, true, true,
+    '#cccccc', SpreadsheetApp.BorderStyle.SOLID
+  );
+  sheet.getRange('C32:C39').setNumberFormat('0.00"%"');
+  sheet.getRange('E32:E39').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('F32:G39').setWrap(true);
+  sheet.getRange('A32:G39').setBackground('#fff3cd');
+}
+
+/**
+ * 推奨アクションセクション（A42:H55）
+ */
+function setupRecommendedActions(sheet) {
+  // セクションヘッダー
+  sheet.getRange('A42').setValue('【💡 今週の推奨アクション】');
+  sheet.getRange('A42:H42').merge();
+  sheet.getRange('A42')
+    .setFontSize(14)
+    .setFontWeight('bold')
+    .setBackground('#d9ead3')
+    .setHorizontalAlignment('left');
+
+  // ヘッダー行
+  const headers = ['候補者ID', '氏名', '承諾可能性', 'フェーズ', '推奨アクション', '期限', '優先度', '実行状況'];
+  sheet.getRange('A43:H43').setValues([headers]);
+  sheet.getRange('A43:H43')
+    .setFontWeight('bold')
+    .setBackground(CONFIG.COLORS.HEADER_BG)
+    .setFontColor(CONFIG.COLORS.HEADER_TEXT)
+    .setHorizontalAlignment('center');
+
+  // QUERY関数でアクションが必要な候補者を抽出
+  const query = `=QUERY(Dashboard_Data!A:F,
+    "SELECT A, B, C, D
+     WHERE A IS NOT NULL AND C >= 60 AND C < 80
+     ORDER BY C DESC
+     LIMIT 10",
+    0)`;
+
+  sheet.getRange('A44').setFormula(query);
+
+  // E列: 推奨アクション
+  sheet.getRange('E44').setFormula(
+    '=IF(D44="初回面談", "社員面談の設定", IF(D44="社員面談", "2次面接への推薦", IF(D44="2次面接", "最終面接への推薦", IF(D44="内定後", "承諾促進アクション", "フォローアップ"))))'
+  );
+
+  // F列: 期限
+  sheet.getRange('F44').setFormula('=TODAY()+7');
+
+  // G列: 優先度
+  sheet.getRange('G44').setFormula(
+    '=IF(C44>=70, "中", IF(C44>=60, "高", "CRITICAL"))'
+  );
+
+  // H列: 実行状況
+  sheet.getRange('H44').setValue('未実行');
+
+  // 列幅設定
+  sheet.setColumnWidth(1, 100);  // A: 候補者ID
+  sheet.setColumnWidth(2, 120);  // B: 氏名
+  sheet.setColumnWidth(3, 100);  // C: 承諾可能性
+  sheet.setColumnWidth(4, 100);  // D: フェーズ
+  sheet.setColumnWidth(5, 250);  // E: 推奨アクション
+  sheet.setColumnWidth(6, 110);  // F: 期限
+  sheet.setColumnWidth(7, 80);   // G: 優先度
+  sheet.setColumnWidth(8, 100);  // H: 実行状況
+
+  // 書式設定
+  sheet.getRange('A44:H53').setBorder(
+    true, true, true, true, true, true,
+    '#cccccc', SpreadsheetApp.BorderStyle.SOLID
+  );
+  sheet.getRange('C44:C53').setNumberFormat('0.00"%"');
+  sheet.getRange('F44:F53').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('E44:E53').setWrap(true);
+}
+
+/**
+ * AI予測 vs 人間の直感セクション（A57:E75）
  */
 function setupDashboardAIComparison(sheet) {
   // セクションヘッダー
-  sheet.getRange('A32').setValue('【AI予測 vs 人間の直感】');
-  sheet.getRange('A32:E32').merge();
-  sheet.getRange('A32')
+  sheet.getRange('A57').setValue('【AI予測 vs 人間の直感】');
+  sheet.getRange('A57:E57').merge();
+  sheet.getRange('A57')
     .setFontSize(14)
     .setFontWeight('bold')
     .setBackground('#f3f3f3')
@@ -465,8 +599,8 @@ function setupDashboardAIComparison(sheet) {
 
   // ヘッダー行
   const headers = ['候補者ID', 'AI予測', '人間の直感', '乖離', '状態'];
-  sheet.getRange('A33:E33').setValues([headers]);
-  sheet.getRange('A33:E33')
+  sheet.getRange('A58:E58').setValues([headers]);
+  sheet.getRange('A58:E58')
     .setFontWeight('bold')
     .setBackground(CONFIG.COLORS.HEADER_BG)
     .setFontColor(CONFIG.COLORS.HEADER_TEXT)
@@ -480,21 +614,21 @@ function setupDashboardAIComparison(sheet) {
      LIMIT 15",
     0)`;
 
-  sheet.getRange('A34').setFormula(query);
+  sheet.getRange('A59').setFormula(query);
 
-  // E列: 状態判定
-  sheet.getRange('E34').setFormula(
-    '=IF(D34="", "", ' +
-    'IF(D34<=10, "✅ 一致", ' +
-    'IF(D34<=20, "⚠️ やや乖離", "❌ 大きく乖離")))'
+  // E列: 状態判定（閾値を5点と15点に変更）
+  sheet.getRange('E59').setFormula(
+    '=IF(D59="", "", ' +
+    'IF(D59<=5, "✅ 一致", ' +
+    'IF(D59<=15, "⚠️ やや乖離", "❌ 大きく乖離")))'
   );
 
   // 書式設定
-  sheet.getRange('A34:E48').setBorder(
+  sheet.getRange('A59:E73').setBorder(
     true, true, true, true, true, true,
     '#cccccc', SpreadsheetApp.BorderStyle.SOLID
   );
-  sheet.getRange('B34:D48').setNumberFormat('0.00"%"');
+  sheet.getRange('B59:D73').setNumberFormat('0.00"%"');
 }
 
 /**
@@ -508,14 +642,15 @@ function setupDashboardConditionalFormats() {
 
   const rules = [];
 
-  // === 候補者ランキング: 承諾可能性のヒートマップ（C13:C27） ===
+  // === 候補者ランキング: 承諾可能性のヒートマップ（D13:D27） ===
+  // 氏名追加により列がC→Dに変更
 
   // 高確率（80点以上）: 緑
   rules.push(
     SpreadsheetApp.newConditionalFormatRule()
       .whenNumberGreaterThanOrEqualTo(80)
       .setBackground('#d9ead3')
-      .setRanges([sheet.getRange('C13:C27')])
+      .setRanges([sheet.getRange('D13:D27')])
       .build()
   );
 
@@ -524,7 +659,7 @@ function setupDashboardConditionalFormats() {
     SpreadsheetApp.newConditionalFormatRule()
       .whenNumberBetween(60, 79)
       .setBackground('#fff2cc')
-      .setRanges([sheet.getRange('C13:C27')])
+      .setRanges([sheet.getRange('D13:D27')])
       .build()
   );
 
@@ -535,20 +670,20 @@ function setupDashboardConditionalFormats() {
       .setBackground('#f4cccc')
       .setFontColor('#cc0000')
       .setBold(true)
-      .setRanges([sheet.getRange('C13:C27')])
+      .setRanges([sheet.getRange('D13:D27')])
       .build()
   );
 
-  // === AI予測 vs 人間の直感: 乖離の強調（D34:D48） ===
+  // === AI予測 vs 人間の直感: 乖離の強調（D59:D73） ===
 
-  // 大きく乖離（20点以上）: オレンジ
+  // 大きく乖離（15点以上）: オレンジ
   rules.push(
     SpreadsheetApp.newConditionalFormatRule()
-      .whenNumberGreaterThan(20)
+      .whenNumberGreaterThan(15)
       .setBackground('#fce5cd')
       .setFontColor('#cc0000')
       .setBold(true)
-      .setRanges([sheet.getRange('D34:D48')])
+      .setRanges([sheet.getRange('D59:D73')])
       .build()
   );
 
