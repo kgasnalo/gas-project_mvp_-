@@ -729,3 +729,74 @@ function fixStatusChart() {
   Logger.log('5. 「更新」をクリック');
   Logger.log('');
 }
+
+/**
+ * ステータス別グラフ用の固定データテーブルを作成
+ * Dashboardシート内のR30:S35に配置
+ */
+function createStatusTableOnDashboard() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dashboard = ss.getSheetByName('Dashboard');
+
+  if (!dashboard) {
+    throw new Error('Dashboardシートが見つかりません');
+  }
+
+  // 現在ステータス列を特定
+  const statusColumn = findStatusColumnLetter();
+
+  if (!statusColumn) {
+    throw new Error('現在ステータス列が見つかりません');
+  }
+
+  Logger.log('====================================');
+  Logger.log('📊 ステータス別グラフ用データ作成開始');
+  Logger.log('====================================');
+  Logger.log(`✅ 現在ステータス列: ${statusColumn}列`);
+
+  // ヘッダー
+  dashboard.getRange('R30').setValue('ステータス');
+  dashboard.getRange('S30').setValue('人数');
+
+  // ヘッダーの書式設定
+  const headerRange = dashboard.getRange('R30:S30');
+  headerRange.setBackground('#4285f4');
+  headerRange.setFontColor('#ffffff');
+  headerRange.setFontWeight('bold');
+  headerRange.setHorizontalAlignment('center');
+
+  // データ行（固定順序）
+  const statusOrder = [
+    '初回面談',
+    '1次面接',
+    '社員面談',
+    '2次面接',
+    '最終面接'
+  ];
+
+  statusOrder.forEach((status, index) => {
+    const row = 31 + index;
+    dashboard.getRange(`R${row}`).setValue(status);
+    dashboard.getRange(`S${row}`).setFormula(
+      `=COUNTIF(Candidates_Master!${statusColumn}:${statusColumn},"${status}")`
+    );
+    Logger.log(`  ✓ R${row}: ${status}`);
+  });
+
+  // データ範囲の書式設定
+  const dataRange = dashboard.getRange('R31:S35');
+  dataRange.setBorder(true, true, true, true, true, true);
+
+  Logger.log('====================================');
+  Logger.log('✅ ステータス別データ作成完了');
+  Logger.log('====================================');
+  Logger.log('');
+  Logger.log('📋 次の手順（手動作業が必要）:');
+  Logger.log('1. Dashboardシートを開く');
+  Logger.log('2. ステータス別候補者数のグラフをクリック');
+  Logger.log('3. 右上の「︙」→「グラフを編集」');
+  Logger.log('4. データ範囲を「Dashboard!R30:S35」に変更');
+  Logger.log('5. 「更新」をクリック');
+  Logger.log('');
+  Logger.log('⚠️ 重要: グラフのデータ範囲変更は手動で行う必要があります');
+}
