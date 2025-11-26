@@ -125,6 +125,11 @@ function setupDashboardSheet() {
   // === AI予測 vs 人間の直感セクション（A57:E75） ===
   setupDashboardAIComparison(sheet);
 
+  // === PQ列の古いデータをクリア（QUERY関数の残骸を削除） ===
+  Logger.log('📝 PQ列の古いデータをクリア中...');
+  sheet.getRange('P29:Q40').clearContent();
+  sheet.getRange('P62:Q66').clearContent();
+
   Logger.log('✅ Dashboardシート作成完了');
 }
 

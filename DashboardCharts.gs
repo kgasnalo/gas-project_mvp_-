@@ -85,6 +85,7 @@ function createCandidateBarChart(sheet) {
  *
  * 配置: J29:N43
  * ステータスごとの候補者数を表示
+ * R30:S35の固定データテーブルを使用
  */
 function createPhaseLineChart(sheet) {
   Logger.log('  📊 ステータス別人数分布（棒グラフ）を作成中...');
@@ -96,31 +97,55 @@ function createPhaseLineChart(sheet) {
     return;
   }
 
-  // Candidates_MasterのステータスをQUERYで集計
-  // 一時的なデータ範囲をDashboardシートに作成
-  const tempDataRange = sheet.getRange('P29:Q40');
-  tempDataRange.clearContent();
+  // 現在ステータス列を特定
+  const statusColumn = findStatusColumnLetter();
+  if (!statusColumn) {
+    Logger.log('  ⚠️ 現在ステータス列が見つかりません');
+    return;
+  }
+
+  // R30:S35に固定データテーブルを作成
+  Logger.log('  📝 固定データテーブル（R30:S35）を作成中...');
 
   // ヘッダー
-  sheet.getRange('P29').setValue('ステータス');
-  sheet.getRange('Q29').setValue('人数');
+  sheet.getRange('R30').setValue('ステータス');
+  sheet.getRange('S30').setValue('人数');
 
-  // QUERYで集計
-  sheet.getRange('P30').setFormula(
-    '=QUERY(Candidates_Master!C:C, ' +
-    '"SELECT C, COUNT(C) ' +
-    'WHERE C IS NOT NULL ' +
-    'GROUP BY C ' +
-    'ORDER BY COUNT(C) DESC", 1)'
-  );
+  // ヘッダーの書式設定
+  const headerRange = sheet.getRange('R30:S30');
+  headerRange.setBackground('#4285f4');
+  headerRange.setFontColor('#ffffff');
+  headerRange.setFontWeight('bold');
+  headerRange.setHorizontalAlignment('center');
 
-  // データ範囲を取得
+  // データ行（固定順序）
+  const statusOrder = [
+    '初回面談',
+    '1次面接',
+    '社員面談',
+    '2次面接',
+    '最終面接'
+  ];
+
+  statusOrder.forEach((status, index) => {
+    const row = 31 + index;
+    sheet.getRange(`R${row}`).setValue(status);
+    sheet.getRange(`S${row}`).setFormula(
+      `=COUNTIF(Candidates_Master!${statusColumn}:${statusColumn},"${status}")`
+    );
+  });
+
+  // データ範囲の書式設定
+  const dataRange = sheet.getRange('R31:S35');
+  dataRange.setBorder(true, true, true, true, true, true);
+
+  // データ範囲（R30:S35）を使用してグラフを作成
   SpreadsheetApp.flush(); // 数式を先に実行
-  const dataRange = sheet.getRange('P29:Q40');
+  const chartDataRange = sheet.getRange('R30:S35');
 
   const chart = sheet.newChart()
     .setChartType(Charts.ChartType.COLUMN)
-    .addRange(dataRange)
+    .addRange(chartDataRange)
     .setPosition(29, 10, 0, 0) // J29セル
     .setOption('title', 'ステータス別候補者数')
     .setOption('width', 500)
@@ -143,7 +168,7 @@ function createPhaseLineChart(sheet) {
 
   sheet.insertChart(chart);
 
-  Logger.log('  ✅ 棒グラフ作成完了');
+  Logger.log('  ✅ 棒グラフ作成完了（データ範囲: R30:S35）');
 }
 
 /**
@@ -282,4 +307,45 @@ function recreateSpecificChart(chartType) {
     default:
       Logger.log('❌ 無効なチャートタイプ: ' + chartType);
   }
+}
+
+/**
+ * 列番号をアルファベットに変換（例: 1→A, 27→AA）
+ */
+function columnToLetter(column) {
+  let temp, letter = '';
+  while (column > 0) {
+    temp = (column - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    column = (column - temp - 1) / 26;
+  }
+  return letter;
+}
+
+/**
+ * 現在ステータス列のアルファベットを取得
+ */
+function findStatusColumnLetter() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const master = ss.getSheetByName('Candidates_Master');
+
+  if (!master) {
+    Logger.log('❌ Candidates_Masterシートが見つかりません');
+    return null;
+  }
+
+  const headers = master.getRange(1, 1, 1, master.getLastColumn()).getValues()[0];
+
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i].toString().trim();
+    if (header === '現在ステータス' ||
+        header === 'ステータス' ||
+        header === '選考ステータス' ||
+        header === '現在のステータス') {
+      return columnToLetter(i + 1);
+    }
+  }
+
+  Logger.log('❌ 現在ステータス列が見つかりません');
+  return null;
 }
