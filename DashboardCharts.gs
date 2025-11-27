@@ -85,7 +85,7 @@ function createCandidateBarChart(sheet) {
  *
  * 配置: J29:N43
  * ステータスごとの候補者数を表示
- * R30:S35の固定データテーブルを使用
+ * P30:Q35の固定データテーブルを使用（グラフはP31:Q35を参照）
  */
 function createPhaseLineChart(sheet) {
   Logger.log('  📊 ステータス別人数分布（棒グラフ）を作成中...');
@@ -104,15 +104,15 @@ function createPhaseLineChart(sheet) {
     return;
   }
 
-  // R30:S35に固定データテーブルを作成
-  Logger.log('  📝 固定データテーブル（R30:S35）を作成中...');
+  // P30:Q35に固定データテーブルを作成
+  Logger.log('  📝 固定データテーブル（P30:Q35）を作成中...');
 
   // ヘッダー
-  sheet.getRange('R30').setValue('ステータス');
-  sheet.getRange('S30').setValue('人数');
+  sheet.getRange('P30').setValue('ステータス');
+  sheet.getRange('Q30').setValue('人数');
 
   // ヘッダーの書式設定
-  const headerRange = sheet.getRange('R30:S30');
+  const headerRange = sheet.getRange('P30:Q30');
   headerRange.setBackground('#4285f4');
   headerRange.setFontColor('#ffffff');
   headerRange.setFontWeight('bold');
@@ -129,19 +129,19 @@ function createPhaseLineChart(sheet) {
 
   statusOrder.forEach((status, index) => {
     const row = 31 + index;
-    sheet.getRange(`R${row}`).setValue(status);
-    sheet.getRange(`S${row}`).setFormula(
+    sheet.getRange(`P${row}`).setValue(status);
+    sheet.getRange(`Q${row}`).setFormula(
       `=COUNTIF(Candidates_Master!${statusColumn}:${statusColumn},"${status}")`
     );
   });
 
   // データ範囲の書式設定
-  const dataRange = sheet.getRange('R31:S35');
+  const dataRange = sheet.getRange('P31:Q35');
   dataRange.setBorder(true, true, true, true, true, true);
 
-  // データ範囲（R30:S35）を使用してグラフを作成
+  // データ範囲（P31:Q35）を使用してグラフを作成（ヘッダーを除く）
   SpreadsheetApp.flush(); // 数式を先に実行
-  const chartDataRange = sheet.getRange('R30:S35');
+  const chartDataRange = sheet.getRange('P31:Q35');
 
   const chart = sheet.newChart()
     .setChartType(Charts.ChartType.COLUMN)
@@ -168,7 +168,7 @@ function createPhaseLineChart(sheet) {
 
   sheet.insertChart(chart);
 
-  Logger.log('  ✅ 棒グラフ作成完了（データ範囲: R30:S35）');
+  Logger.log('  ✅ 棒グラフ作成完了（データ範囲: P31:Q35）');
 }
 
 /**
