@@ -4,7 +4,102 @@
  * 作成日: 2025年11月27日
  * 対象: 【MVP_v1】候補者管理シート
  * ========================================
+ *
+ * 【重要な安全対策】
+ * - Step 2実行前に必ずバックアップを作成
+ * - エラーハンドリングを強化
+ * - データ検証を徹底
  */
+
+// ========================================
+// Phase 0: 事前準備（必須）
+// ========================================
+
+/**
+ * バックアップ作成関数
+ * Step 2実行前に必ず実行してください
+ */
+function createBackupBeforeStep2() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const masterSheet = ss.getSheetByName('Candidates_Master');
+
+  if (!masterSheet) {
+    throw new Error('Candidates_Masterが見つかりません');
+  }
+
+  // バックアップシートを作成
+  const backupSheet = masterSheet.copyTo(ss);
+  const timestamp = Utilities.formatDate(new Date(), 'JST', 'yyyyMMdd_HHmmss');
+  backupSheet.setName('Candidates_Master_BACKUP_' + timestamp);
+  backupSheet.hideSheet(); // 非表示にする
+
+  Logger.log('✅ バックアップ作成完了: ' + backupSheet.getName());
+  return backupSheet.getName();
+}
+
+/**
+ * Phase 0: 事前準備（必須）
+ * 実行前に必ずこの関数を実行してください
+ */
+function phase0_preparation() {
+  Logger.log('========================================');
+  Logger.log('Phase 0: 事前準備');
+  Logger.log('========================================');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 1. 現在のシート構成を記録
+  const sheets = ss.getSheets();
+  Logger.log(`現在のシート数: ${sheets.length}`);
+  sheets.forEach(sheet => {
+    Logger.log(`- ${sheet.getName()} (${sheet.getLastColumn()}列)`);
+  });
+
+  // 2. Candidates_Masterの列数を確認
+  const masterSheet = ss.getSheetByName('Candidates_Master');
+  if (!masterSheet) {
+    throw new Error('Candidates_Masterが見つかりません');
+  }
+  Logger.log(`Candidates_Master列数: ${masterSheet.getLastColumn()}列`);
+
+  // 3. 必須列の存在確認
+  const headers = masterSheet.getRange(1, 1, 1, masterSheet.getLastColumn()).getValues()[0];
+  const requiredColumns = [
+    'candidate_id',
+    '氏名',
+    '現在ステータス',
+    '最終更新日時',
+    '最新_合格可能性',
+    '最新_承諾可能性（統合）',
+    'コアモチベーション',
+    '主要懸念事項'
+  ];
+
+  Logger.log('');
+  Logger.log('必須列の存在確認:');
+  let allColumnsExist = true;
+  requiredColumns.forEach(col => {
+    const exists = headers.includes(col);
+    Logger.log(`  ${exists ? '✅' : '❌'} ${col}`);
+    if (!exists) allColumnsExist = false;
+  });
+
+  if (!allColumnsExist) {
+    throw new Error('必須列が不足しています。上記のログを確認してください。');
+  }
+
+  // 4. バックアップ作成
+  Logger.log('');
+  const backupName = createBackupBeforeStep2();
+
+  Logger.log('');
+  Logger.log('====================================');
+  Logger.log('✅ Phase 0完了');
+  Logger.log('====================================');
+  Logger.log('');
+  Logger.log('次のステップ: phase1_execute() を実行してください');
+  Logger.log('');
+}
 
 // ========================================
 // Step 1: 新規シート作成（3シート）
@@ -236,11 +331,12 @@ function migrateDataFromCandidatesMaster() {
   const masterData = masterSheet.getDataRange().getValues();
   const headers = masterData[0];
 
-  // 列のインデックスを取得する関数
+  // 列のインデックスを取得する関数（エラーハンドリング強化版）
   function getColumnIndex(headerName) {
     const index = headers.indexOf(headerName);
     if (index === -1) {
-      Logger.log(`⚠️ 列が見つかりません: ${headerName}`);
+      throw new Error(`列が見つかりません: ${headerName}\n` +
+        `利用可能な列: ${headers.join(', ')}`);
     }
     return index;
   }
@@ -348,6 +444,7 @@ function migrateDataFromCandidatesMaster() {
 /**
  * 2-3. Candidates_Master の列削除と再構成
  * ⚠️ 重要: データ移行が完了してから実行してください
+ * ⚠️ 安全対策: エラー時はバックアップから復旧可能
  */
 function reconstructCandidatesMaster() {
   Logger.log('====================================');
@@ -365,9 +462,14 @@ function reconstructCandidatesMaster() {
   const allData = masterSheet.getDataRange().getValues();
   const headers = allData[0];
 
-  // 必要な列のインデックスを取得
+  // 必要な列のインデックスを取得（エラーハンドリング強化版）
   function getColumnIndex(headerName) {
-    return headers.indexOf(headerName);
+    const index = headers.indexOf(headerName);
+    if (index === -1) {
+      throw new Error(`列が見つかりません: ${headerName}\n` +
+        `利用可能な列: ${headers.join(', ')}`);
+    }
+    return index;
   }
 
   // 残す列のインデックス
@@ -432,12 +534,28 @@ function reconstructCandidatesMaster() {
     newData.push(newRow);
   }
 
-  // 既存のシートをクリア
-  masterSheet.clear();
+  // データ検証
+  if (newData.length < 2) {
+    throw new Error('新しいデータが空です。処理を中断します。');
+  }
 
-  // 新しいデータを書き込み
-  masterSheet.getRange(1, 1, newData.length, newData[0].length)
-    .setValues(newData);
+  Logger.log(`新しいデータ: ${newData.length}行（ヘッダー含む）`);
+
+  try {
+    // 既存のシートをクリア
+    masterSheet.clear();
+
+    // 新しいデータを書き込み
+    masterSheet.getRange(1, 1, newData.length, newData[0].length)
+      .setValues(newData);
+
+    Logger.log('✅ データの書き込み完了');
+
+  } catch (error) {
+    Logger.log('❌ エラー発生: データの書き込みに失敗しました');
+    Logger.log('⚠️ バックアップシート（Candidates_Master_BACKUP_*）から手動で復旧してください');
+    throw error;
+  }
 
   // ヘッダーの書式設定
   const headerRange = masterSheet.getRange(1, 1, 1, newHeaders.length);
@@ -614,9 +732,11 @@ function expandAcceptanceStory() {
     for (let i = 2; i <= dataRows; i++) {
       const candidateId = sheet.getRange(i, 1).getValue();
       if (candidateId) {
+        // シングルクォートのエスケープ処理（SQL構文エラー防止）
+        const escapedId = candidateId.toString().replace(/'/g, "''");
         // Phase3スコアをEngagement_Logから取得
         sheet.getRange(i, startColumn + 1).setFormula(
-          `=IFERROR(QUERY(Engagement_Log!B:H,"SELECT MAX(H) WHERE B='${candidateId}' LABEL MAX(H) ''"),"")`
+          `=IFERROR(QUERY(Engagement_Log!B:H,"SELECT MAX(H) WHERE B='${escapedId}' LABEL MAX(H) ''"),"")`
         );
       }
     }
@@ -1021,4 +1141,110 @@ function rollbackToBackup() {
   Logger.log('⚠️ ロールバックは手動で行ってください');
   Logger.log('1. スプレッドシートのバックアップから復元');
   Logger.log('2. または、Google Driveの「バージョン履歴」から復元');
+}
+
+// ========================================
+// Phase別実行スクリプト（推奨）
+// ========================================
+
+/**
+ * Phase 1: Step 1-2実行
+ * 新規シート作成とデータ移行を実行します
+ */
+function phase1_execute() {
+  Logger.log('========================================');
+  Logger.log('Phase 1: Step 1-2実行');
+  Logger.log('========================================');
+  Logger.log('');
+
+  try {
+    executeAllSteps();
+
+    Logger.log('');
+    Logger.log('========================================');
+    Logger.log('⚠️ データ確認してください:');
+    Logger.log('========================================');
+    Logger.log('1. Candidate_Scoresシートにデータがあるか');
+    Logger.log('2. Candidate_Insightsシートにデータがあるか');
+    Logger.log('3. Candidates_Masterが15列になっているか');
+    Logger.log('4. Candidates_MasterのM列・N列が数式になっているか');
+    Logger.log('');
+    Logger.log('問題なければ phase2_execute() を実行してください');
+    Logger.log('========================================');
+
+  } catch (error) {
+    Logger.log('');
+    Logger.log('❌ エラー発生:');
+    Logger.log(error.toString());
+    Logger.log('');
+    Logger.log('⚠️ バックアップシートから復旧してください');
+  }
+}
+
+/**
+ * Phase 2: Step 3-4実行
+ * 既存シート拡張と不要シート削除を実行します
+ */
+function phase2_execute() {
+  Logger.log('========================================');
+  Logger.log('Phase 2: Step 3-4実行');
+  Logger.log('========================================');
+  Logger.log('');
+
+  try {
+    executeStep3AndStep4();
+
+    Logger.log('');
+    Logger.log('========================================');
+    Logger.log('✅ 全ての実装が完了しました！');
+    Logger.log('========================================');
+    Logger.log('');
+    Logger.log('最終確認: finalVerification() を実行してください');
+    Logger.log('========================================');
+
+  } catch (error) {
+    Logger.log('');
+    Logger.log('❌ エラー発生:');
+    Logger.log(error.toString());
+    Logger.log('');
+  }
+}
+
+/**
+ * 完全実行ガイド
+ * この関数はガイドのみを表示します（実際の処理は行いません）
+ */
+function executionGuide() {
+  Logger.log('########################################');
+  Logger.log('# スプレッドシート再設計 実行ガイド #');
+  Logger.log('########################################');
+  Logger.log('');
+  Logger.log('⚠️ 重要: 必ず以下の順序で実行してください');
+  Logger.log('');
+  Logger.log('【ステップ0】事前準備');
+  Logger.log('  phase0_preparation()');
+  Logger.log('  → バックアップ作成と列の存在確認');
+  Logger.log('');
+  Logger.log('【ステップ1】データ移行');
+  Logger.log('  phase1_execute()');
+  Logger.log('  → 新規シート作成 + データ移行');
+  Logger.log('  → ログでデータを確認してください');
+  Logger.log('');
+  Logger.log('【ステップ2】既存シート拡張');
+  Logger.log('  phase2_execute()');
+  Logger.log('  → 既存シート拡張 + 不要シート削除');
+  Logger.log('');
+  Logger.log('【ステップ3】最終確認');
+  Logger.log('  finalVerification()');
+  Logger.log('  → データ整合性チェック');
+  Logger.log('');
+  Logger.log('########################################');
+  Logger.log('');
+  Logger.log('🚨 注意事項:');
+  Logger.log('1. 必ずコピーしたスプレッドシートで実行');
+  Logger.log('2. Phase 1実行後、必ずデータを確認');
+  Logger.log('3. エラーが発生したらバックアップから復旧');
+  Logger.log('');
+  Logger.log('準備ができたら phase0_preparation() を実行');
+  Logger.log('########################################');
 }
