@@ -737,7 +737,7 @@ function fixStatusChart() {
 
 /**
  * ステータス別グラフ用の固定データテーブルを作成
- * Dashboardシート内のR30:S35に配置
+ * Dashboardシート内のP30:Q35に配置
  */
 function createStatusTableOnDashboard() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -760,11 +760,11 @@ function createStatusTableOnDashboard() {
   Logger.log(`✅ 現在ステータス列: ${statusColumn}列`);
 
   // ヘッダー
-  dashboard.getRange('R30').setValue('ステータス');
-  dashboard.getRange('S30').setValue('人数');
+  dashboard.getRange('P30').setValue('ステータス');
+  dashboard.getRange('Q30').setValue('人数');
 
   // ヘッダーの書式設定
-  const headerRange = dashboard.getRange('R30:S30');
+  const headerRange = dashboard.getRange('P30:Q30');
   headerRange.setBackground('#4285f4');
   headerRange.setFontColor('#ffffff');
   headerRange.setFontWeight('bold');
@@ -781,15 +781,15 @@ function createStatusTableOnDashboard() {
 
   statusOrder.forEach((status, index) => {
     const row = 31 + index;
-    dashboard.getRange(`R${row}`).setValue(status);
-    dashboard.getRange(`S${row}`).setFormula(
+    dashboard.getRange(`P${row}`).setValue(status);
+    dashboard.getRange(`Q${row}`).setFormula(
       `=COUNTIF(Candidates_Master!${statusColumn}:${statusColumn},"${status}")`
     );
-    Logger.log(`  ✓ R${row}: ${status}`);
+    Logger.log(`  ✓ P${row}: ${status}`);
   });
 
   // データ範囲の書式設定
-  const dataRange = dashboard.getRange('R31:S35');
+  const dataRange = dashboard.getRange('P31:Q35');
   dataRange.setBorder(true, true, true, true, true, true);
 
   Logger.log('====================================');
@@ -800,7 +800,7 @@ function createStatusTableOnDashboard() {
   Logger.log('1. Dashboardシートを開く');
   Logger.log('2. ステータス別候補者数のグラフをクリック');
   Logger.log('3. 右上の「︙」→「グラフを編集」');
-  Logger.log('4. データ範囲を「Dashboard!R30:S35」に変更');
+  Logger.log('4. データ範囲を「Dashboard!P31:Q35」に変更');
   Logger.log('5. 「更新」をクリック');
   Logger.log('');
   Logger.log('⚠️ 重要: グラフのデータ範囲変更は手動で行う必要があります');
