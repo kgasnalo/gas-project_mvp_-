@@ -64,16 +64,56 @@ function phase0_preparation() {
 
   // 3. 必須列の存在確認
   const headers = masterSheet.getRange(1, 1, 1, masterSheet.getLastColumn()).getValues()[0];
-  const requiredColumns = [
-    'candidate_id',
-    '氏名',
-    '現在ステータス',
-    '最終更新日時',
-    '最新_合格可能性',
-    '最新_承諾可能性（統合）',
-    'コアモチベーション',
-    '主要懸念事項'
-  ];
+
+  // 現在の列数で新旧構造を判定
+  const currentColumns = masterSheet.getLastColumn();
+  const isOldStructure = currentColumns > 30; // 57列の旧構造
+  const isNewStructure = currentColumns === 21; // 21列の新構造
+
+  Logger.log('');
+  Logger.log('構造判定:');
+  Logger.log(`  列数: ${currentColumns}列`);
+
+  let requiredColumns;
+
+  if (isNewStructure) {
+    Logger.log('  状態: ✅ 既に新構造（21列）に移行済み');
+    Logger.log('');
+    Logger.log('⚠️ 既に新構造に移行済みです。');
+    Logger.log('   再度実行する場合は、以下を確認してください:');
+    Logger.log('   1. バックアップシート（Candidates_Master_BACKUP_*）が存在するか');
+    Logger.log('   2. Candidate_ScoresとCandidate_Insightsシートが既に存在する場合、削除されます');
+    Logger.log('');
+
+    // 新構造用の必須列チェック
+    requiredColumns = [
+      'candidate_id',
+      '氏名',
+      'メールアドレス',
+      '現在ステータス',
+      '最終更新日時',
+      '最新_合格可能性',
+      '最新_承諾可能性'
+    ];
+  } else if (isOldStructure) {
+    Logger.log('  状態: 📝 旧構造（57列）- 移行が必要');
+
+    // 旧構造用の必須列チェック
+    requiredColumns = [
+      'candidate_id',
+      '氏名',
+      '現在ステータス',
+      '最終更新日時',
+      '最新_合格可能性',
+      '最新_承諾可能性（統合）',
+      'コアモチベーション',
+      '主要懸念事項'
+    ];
+  } else {
+    Logger.log('  状態: ⚠️ 不明な構造');
+    throw new Error(`想定外の列数です: ${currentColumns}列\n` +
+      '旧構造（57列）または新構造（21列）である必要があります。');
+  }
 
   Logger.log('');
   Logger.log('必須列の存在確認:');
