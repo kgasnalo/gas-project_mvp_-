@@ -1283,6 +1283,45 @@ function phase1_execute() {
   Logger.log('========================================');
   Logger.log('');
 
+  // 構造チェック: 既に新構造の場合はスキップ
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const masterSheet = ss.getSheetByName('Candidates_Master');
+  const currentColumns = masterSheet.getLastColumn();
+  const isNewStructure = currentColumns === 21;
+
+  if (isNewStructure) {
+    Logger.log('⚠️ 既に新構造（21列）に移行済みです。');
+    Logger.log('');
+    Logger.log('現在の状態:');
+    Logger.log('  ✅ Candidates_Master: 21列（新構造）');
+
+    const scoresSheet = ss.getSheetByName('Candidate_Scores');
+    const insightsSheet = ss.getSheetByName('Candidate_Insights');
+
+    if (scoresSheet) {
+      Logger.log('  ✅ Candidate_Scores: 存在します');
+    } else {
+      Logger.log('  ❌ Candidate_Scores: 存在しません');
+    }
+
+    if (insightsSheet) {
+      Logger.log('  ✅ Candidate_Insights: 存在します');
+    } else {
+      Logger.log('  ❌ Candidate_Insights: 存在しません');
+    }
+
+    Logger.log('');
+    Logger.log('========================================');
+    Logger.log('Phase 1の実行は不要です。');
+    Logger.log('========================================');
+    Logger.log('');
+    Logger.log('次のステップ:');
+    Logger.log('- 既存シートの拡張が必要な場合: phase2_execute()');
+    Logger.log('- 旧構造からやり直す場合: バックアップシートから復元してください');
+    Logger.log('');
+    return;
+  }
+
   try {
     executeAllSteps();
 
