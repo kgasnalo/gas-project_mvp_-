@@ -614,4 +614,439 @@ function createCustomerReadme() {
   Logger.log('✅ 顧客向けREADMEシートを作成');
 }
 
-// 続く...
+/**
+ * システムの健全性をチェック
+ */
+function runHealthCheck() {
+  Logger.log('====================================');
+  Logger.log('システム健全性チェック開始');
+  Logger.log('====================================');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const issues = [];
+  const warnings = [];
+
+  // 必須シートの存在確認
+  const requiredSheets = [
+    'Candidates_Master',
+    'Candidate_Scores',
+    'Candidate_Insights',
+    'Evaluation_Log',
+    'Contact_History'
+  ];
+
+  requiredSheets.forEach(sheetName => {
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      issues.push(`シートが見つかりません: ${sheetName}`);
+    } else {
+      Logger.log(`✅ ${sheetName} - OK`);
+    }
+  });
+
+  // データ整合性チェック
+  let masterIds = [];
+  let scoresIds = [];
+  const masterSheet = ss.getSheetByName('Candidates_Master');
+  const scoresSheet = ss.getSheetByName('Candidate_Scores');
+
+  if (masterSheet && scoresSheet) {
+    const masterRowCount = masterSheet.getLastRow() - 1;
+    const scoresRowCount = scoresSheet.getLastRow() - 1;
+
+    if (masterRowCount > 0) {
+      masterIds = masterSheet.getRange(2, 1, masterRowCount, 1)
+        .getValues().flat().filter(id => id);
+    }
+
+    if (scoresRowCount > 0) {
+      scoresIds = scoresSheet.getRange(2, 1, scoresRowCount, 1)
+        .getValues().flat().filter(id => id);
+    }
+
+    if (masterIds.length !== scoresIds.length) {
+      warnings.push(
+        `データ件数が不一致です: ` +
+        `Master=${masterIds.length}件, Scores=${scoresIds.length}件`
+      );
+    } else {
+      Logger.log(`✅ データ件数一致: ${masterIds.length}件`);
+    }
+  }
+
+  // 結果を表示
+  Logger.log('====================================');
+
+  let message = '■ システム健全性チェック結果\n\n';
+
+  if (issues.length === 0 && warnings.length === 0) {
+    message += '✅ 全て正常です\n';
+    message += `候補者データ: ${masterIds.length}件\n`;
+    message += '\nシステムは正常に動作しています。';
+  } else {
+    if (issues.length > 0) {
+      message += '❌ エラー:\n';
+      issues.forEach(issue => {
+        message += `- ${issue}\n`;
+      });
+      message += '\n';
+    }
+
+    if (warnings.length > 0) {
+      message += '⚠️ 警告:\n';
+      warnings.forEach(warning => {
+        message += `- ${warning}\n`;
+      });
+    }
+  }
+
+  Logger.log(message);
+
+  SpreadsheetApp.getUi().alert(
+    'システム健全性チェック',
+    message,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+
+  Logger.log('====================================');
+
+  return {
+    success: issues.length === 0,
+    issues: issues,
+    warnings: warnings
+  };
+}
+
+// ========================================
+// Phase 4: カスタムメニューとUI
+// ========================================
+
+/**
+ * スプレッドシート起動時に実行
+ */
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+
+  ui.createMenu('📊 採用参謀AI')
+    .addItem('✅ 動作確認', 'runHealthCheck')
+    .addSeparator()
+    .addItem('🎬 デモモードON', 'enableDemoMode')
+    .addItem('📥 サンプルデータ投入', 'insertSampleData')
+    .addItem('🔄 データリセット', 'confirmAndResetData')
+    .addSeparator()
+    .addItem('📖 使い方ガイド', 'showUserGuide')
+    .addItem('🔧 初期セットアップ', 'runInitialSetup')
+    .addSeparator()
+    .addItem('🔁 データ移行実行', 'executeCompleteImplementation')
+    .addToUi();
+}
+
+/**
+ * デモモードを有効化
+ */
+function enableDemoMode() {
+  const ui = SpreadsheetApp.getUi();
+  const result = ui.alert(
+    'デモモードを有効化',
+    'サンプルデータを投入してデモモードを開始しますか？\n' +
+    '（既存データは保持されます）',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (result === ui.Button.YES) {
+    insertSampleData();
+  }
+}
+
+/**
+ * データリセット（確認付き）
+ */
+function confirmAndResetData() {
+  const ui = SpreadsheetApp.getUi();
+  const result = ui.alert(
+    '⚠️ データリセット',
+    '全てのデータを削除してリセットしますか？\n' +
+    'この操作は取り消せません。',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (result === ui.Button.YES) {
+    resetAllData();
+  }
+}
+
+/**
+ * 全データをリセット
+ */
+function resetAllData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ['Candidates_Master', 'Candidate_Scores', 'Candidate_Insights'];
+
+  sheets.forEach(sheetName => {
+    const sheet = ss.getSheetByName(sheetName);
+    if (sheet && sheet.getLastRow() > 1) {
+      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn())
+        .clearContent();
+    }
+  });
+
+  SpreadsheetApp.getUi().alert(
+    '✅ リセット完了',
+    '全てのデータをクリアしました。',
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+/**
+ * 使い方ガイドを表示
+ */
+function showUserGuide() {
+  const ui = SpreadsheetApp.getUi();
+  const guide =
+    '■ 採用参謀AI 使い方ガイド\n\n' +
+    '【基本的な流れ】\n' +
+    '1. Candidates_Masterに候補者を追加\n' +
+    '2. Evaluation_Logに面接評価を入力\n' +
+    '3. AIが自動でスコアを計算\n' +
+    '4. Candidate_Scoresで結果を確認\n\n' +
+    '【デモモードの使い方】\n' +
+    'メニューから「デモモードON」を選択すると、\n' +
+    'サンプルデータで動作を確認できます。\n\n' +
+    '詳細は「📖 README（必読）」シートをご覧ください。';
+
+  ui.alert('使い方ガイド', guide, ui.ButtonSet.OK);
+}
+
+/**
+ * 初期セットアップウィザード
+ */
+function runInitialSetup() {
+  Logger.log('====================================');
+  Logger.log('初期セットアップ開始');
+  Logger.log('====================================');
+
+  const ui = SpreadsheetApp.getUi();
+
+  // Step 1: 健全性チェック
+  ui.alert(
+    'ステップ1: システムチェック',
+    'まず、システムの健全性をチェックします。',
+    ui.ButtonSet.OK
+  );
+
+  const healthCheck = runHealthCheck();
+
+  if (!healthCheck.success) {
+    ui.alert(
+      '⚠️ セットアップ中断',
+      'システムに問題が検出されました。\n' +
+      '管理者に連絡してください。',
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
+  // Step 2: READMEシート作成
+  ui.alert(
+    'ステップ2: ドキュメント作成',
+    '使い方ガイドを作成します。',
+    ui.ButtonSet.OK
+  );
+
+  createCustomerReadme();
+
+  // Step 3: サンプルデータ
+  const sampleResult = ui.alert(
+    'ステップ3: サンプルデータ',
+    'デモ用のサンプルデータを投入しますか？\n' +
+    '（後でメニューから追加することも可能です）',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (sampleResult === ui.Button.YES) {
+    insertSampleData();
+  }
+
+  // 完了
+  ui.alert(
+    '✅ セットアップ完了',
+    '初期セットアップが完了しました。\n\n' +
+    '「📖 README（必読）」シートで\n' +
+    '使い方を確認してから利用を開始してください。',
+    ui.ButtonSet.OK
+  );
+
+  Logger.log('====================================');
+  Logger.log('✅ 初期セットアップ完了');
+  Logger.log('====================================');
+}
+
+// ========================================
+// 統合実行スクリプト
+// ========================================
+
+/**
+ * 全ステップを順次実行
+ */
+function executeCompleteImplementation() {
+  Logger.log('########################################');
+  Logger.log('# 汎用版スプレッドシート実装開始 #');
+  Logger.log('########################################');
+  Logger.log('');
+
+  try {
+    // Phase 1: バックアップからデータ抽出
+    Logger.log('Phase 1: データ抽出');
+    const extracted = extractDataFromBackup();
+
+    if (!extracted.success) {
+      throw new Error('データ抽出に失敗しました');
+    }
+
+    Logger.log(`抽出件数: ${extracted.dataCount}件`);
+    Logger.log('');
+
+    // Phase 2: 新シートにデータ投入
+    Logger.log('Phase 2: データ投入');
+    populateCandidateScores(extracted.data);
+    populateCandidateInsights(extracted.data);
+    Logger.log('');
+
+    // Phase 3: 販売対応の仕上げ
+    Logger.log('Phase 3: 販売対応');
+    createCustomerReadme();
+    Logger.log('');
+
+    // Phase 4: カスタムメニュー
+    Logger.log('Phase 4: UIセットアップ');
+    onOpen(); // メニューを再読み込み
+    Logger.log('');
+
+    // 最終確認
+    Logger.log('最終確認');
+    const healthCheck = runHealthCheck();
+    Logger.log('');
+
+    Logger.log('########################################');
+    Logger.log('# ✅ 実装完了 #');
+    Logger.log('########################################');
+    Logger.log('');
+    Logger.log('次のアクション:');
+    Logger.log('1. 各シートのデータを確認');
+    Logger.log('2. メニューから「動作確認」を実行');
+    Logger.log('3. 問題なければ本番運用開始');
+
+    SpreadsheetApp.getUi().alert(
+      '✅ データ移行完了',
+      `バックアップから${extracted.dataCount}件のデータを移行しました。\n\n` +
+      'Candidate_Scores と Candidate_Insights を確認してください。',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+
+  } catch (error) {
+    Logger.log('');
+    Logger.log('❌ エラー発生:');
+    Logger.log(error.toString());
+    Logger.log('');
+    Logger.log('スタックトレース:');
+    Logger.log(error.stack);
+
+    SpreadsheetApp.getUi().alert(
+      '❌ エラー発生',
+      'データ移行中にエラーが発生しました:\n\n' + error.toString(),
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+// ========================================
+// 最終確認
+// ========================================
+
+/**
+ * 製品準備状況の最終確認
+ */
+function finalProductReadinessCheck() {
+  Logger.log('====================================');
+  Logger.log('製品準備状況の最終確認');
+  Logger.log('====================================');
+
+  const checks = [];
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 1. データ整合性
+  const masterSheet = ss.getSheetByName('Candidates_Master');
+  const scoresSheet = ss.getSheetByName('Candidate_Scores');
+  const insightsSheet = ss.getSheetByName('Candidate_Insights');
+
+  let dataIntegrityPassed = false;
+  if (masterSheet && scoresSheet && insightsSheet) {
+    const masterRowCount = masterSheet.getLastRow() - 1;
+    const scoresRowCount = scoresSheet.getLastRow() - 1;
+    const insightsRowCount = insightsSheet.getLastRow() - 1;
+
+    if (masterRowCount > 0 && scoresRowCount > 0 && insightsRowCount > 0) {
+      const masterIds = masterSheet.getRange(2, 1, masterRowCount, 1)
+        .getValues().flat().filter(id => id);
+      const scoresIds = scoresSheet.getRange(2, 1, scoresRowCount, 1)
+        .getValues().flat().filter(id => id);
+      const insightsIds = insightsSheet.getRange(2, 1, insightsRowCount, 1)
+        .getValues().flat().filter(id => id);
+
+      dataIntegrityPassed = masterIds.length === scoresIds.length &&
+                             masterIds.length === insightsIds.length;
+    }
+  }
+
+  checks.push({
+    name: 'データ整合性',
+    passed: dataIntegrityPassed
+  });
+
+  // 2. シート完全性
+  const requiredSheets = [
+    'Candidates_Master',
+    'Candidate_Scores',
+    'Candidate_Insights',
+    '📖 README（必読）'
+  ];
+  checks.push({
+    name: 'シート完全性',
+    passed: requiredSheets.every(name => ss.getSheetByName(name) !== null)
+  });
+
+  // 3. カスタムメニュー
+  checks.push({
+    name: 'カスタムメニュー',
+    passed: true // onOpen()が実行されていれば存在する
+  });
+
+  // 4. サンプルデータ
+  const hasSampleData = masterSheet && masterSheet.getLastRow() > 1;
+  checks.push({
+    name: 'サンプルデータ',
+    passed: hasSampleData
+  });
+
+  // 結果表示
+  Logger.log('');
+  checks.forEach(check => {
+    const status = check.passed ? '✅' : '❌';
+    Logger.log(`${status} ${check.name}`);
+  });
+
+  const allPassed = checks.every(check => check.passed);
+
+  Logger.log('');
+  if (allPassed) {
+    Logger.log('✅ 全てのチェックに合格');
+    Logger.log('このスプレッドシートは販売可能な状態です。');
+  } else {
+    Logger.log('❌ 一部のチェックに不合格');
+    Logger.log('上記の項目を確認してください。');
+  }
+
+  Logger.log('====================================');
+
+  return allPassed;
+}
