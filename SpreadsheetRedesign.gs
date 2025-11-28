@@ -1174,12 +1174,21 @@ function verifyDataIntegrity() {
   const scoresSheet = ss.getSheetByName('Candidate_Scores');
   const insightsSheet = ss.getSheetByName('Candidate_Insights');
 
-  const masterIds = masterSheet.getRange(2, 1, masterSheet.getLastRow() - 1, 1)
-    .getValues().flat().filter(id => id);
-  const scoresIds = scoresSheet.getRange(2, 1, scoresSheet.getLastRow() - 1, 1)
-    .getValues().flat().filter(id => id);
-  const insightsIds = insightsSheet.getRange(2, 1, insightsSheet.getLastRow() - 1, 1)
-    .getValues().flat().filter(id => id);
+  // 各シートのデータ行数を取得（ヘッダー行を除く）
+  const masterRowCount = masterSheet.getLastRow() - 1;
+  const scoresRowCount = scoresSheet.getLastRow() - 1;
+  const insightsRowCount = insightsSheet.getLastRow() - 1;
+
+  // データがある場合のみ取得、ない場合は空配列
+  const masterIds = masterRowCount > 0
+    ? masterSheet.getRange(2, 1, masterRowCount, 1).getValues().flat().filter(id => id)
+    : [];
+  const scoresIds = scoresRowCount > 0
+    ? scoresSheet.getRange(2, 1, scoresRowCount, 1).getValues().flat().filter(id => id)
+    : [];
+  const insightsIds = insightsRowCount > 0
+    ? insightsSheet.getRange(2, 1, insightsRowCount, 1).getValues().flat().filter(id => id)
+    : [];
 
   Logger.log('====================================');
   Logger.log('データ整合性チェック');
@@ -1188,7 +1197,9 @@ function verifyDataIntegrity() {
   Logger.log(`Candidate_Scores: ${scoresIds.length}件`);
   Logger.log(`Candidate_Insights: ${insightsIds.length}件`);
 
-  if (masterIds.length === scoresIds.length &&
+  if (masterIds.length === 0 && scoresIds.length === 0 && insightsIds.length === 0) {
+    Logger.log('ℹ️ データが存在しません（ヘッダーのみ）');
+  } else if (masterIds.length === scoresIds.length &&
       masterIds.length === insightsIds.length) {
     Logger.log('✅ データ件数が一致しています');
   } else {
