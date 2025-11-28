@@ -127,25 +127,26 @@ function createCandidateScoresSheet() {
   // ヘッダー行を作成
   const headers = [
     'candidate_id',                    // A
-    '最終更新日時',                    // B
-    '最新_合格可能性',                 // C
-    '前回_合格可能性',                 // D
-    '合格可能性_増減',                 // E
-    '最新_Philosophy',                 // F
-    '最新_Strategy',                   // G
-    '最新_Motivation',                 // H
-    '最新_Execution',                  // I
-    '最新_合計スコア',                 // J
-    '最新_承諾可能性（AI予測）',       // K
-    '最新_承諾可能性（人間の直感）',   // L
-    '最新_承諾可能性（統合）',         // M
-    '前回_承諾可能性',                 // N
-    '承諾可能性_増減',                 // O
-    '予測の信頼度',                    // P
-    '志望度スコア',                    // Q
-    '競合優位性スコア',                // R
-    '懸念解消度スコア',                // S
-    'アンケート回答速度スコア'         // T
+    '氏名',                            // B
+    '最終更新日時',                    // C
+    '最新_合格可能性',                 // D
+    '前回_合格可能性',                 // E
+    '合格可能性_増減',                 // F
+    '最新_Philosophy',                 // G
+    '最新_Strategy',                   // H
+    '最新_Motivation',                 // I
+    '最新_Execution',                  // J
+    '最新_合計スコア',                 // K
+    '最新_承諾可能性（AI予測）',       // L
+    '最新_承諾可能性（人間の直感）',   // M
+    '最新_承諾可能性（統合）',         // N
+    '前回_承諾可能性',                 // O
+    '承諾可能性_増減',                 // P
+    '予測の信頼度',                    // Q
+    '志望度スコア',                    // R
+    '競合優位性スコア',                // S
+    '懸念解消度スコア',                // T
+    'アンケート回答速度スコア'         // U
   ];
 
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -160,8 +161,9 @@ function createCandidateScoresSheet() {
 
   // 列幅を調整
   sheet.setColumnWidth(1, 120);  // candidate_id
-  sheet.setColumnWidth(2, 150);  // 最終更新日時
-  for (let i = 3; i <= headers.length; i++) {
+  sheet.setColumnWidth(2, 150);  // 氏名
+  sheet.setColumnWidth(3, 150);  // 最終更新日時
+  for (let i = 4; i <= headers.length; i++) {
     sheet.setColumnWidth(i, 150);
   }
 
@@ -193,15 +195,16 @@ function createCandidateInsightsSheet() {
   // ヘッダー行を作成
   const headers = [
     'candidate_id',           // A
-    '最終更新日時',          // B
-    'コアモチベーション',    // C
-    '主要懸念事項',          // D
-    '懸念カテゴリ',          // E
-    '競合企業1',             // F
-    '競合企業2',             // G
-    '競合企業3',             // H
-    '次推奨アクション',      // I
-    'アクション期限'         // J
+    '氏名',                   // B
+    '最終更新日時',          // C
+    'コアモチベーション',    // D
+    '主要懸念事項',          // E
+    '懸念カテゴリ',          // F
+    '競合企業1',             // G
+    '競合企業2',             // H
+    '競合企業3',             // I
+    '次推奨アクション',      // J
+    'アクション期限'         // K
   ];
 
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -216,8 +219,9 @@ function createCandidateInsightsSheet() {
 
   // 列幅を調整
   sheet.setColumnWidth(1, 120);  // candidate_id
-  sheet.setColumnWidth(2, 150);  // 最終更新日時
-  for (let i = 3; i <= headers.length; i++) {
+  sheet.setColumnWidth(2, 150);  // 氏名
+  sheet.setColumnWidth(3, 150);  // 最終更新日時
+  for (let i = 4; i <= headers.length; i++) {
     sheet.setColumnWidth(i, 200);
   }
 
@@ -344,6 +348,7 @@ function migrateDataFromCandidatesMaster() {
   // 必要な列のインデックスを取得
   const colIndexes = {
     candidate_id: getColumnIndex('candidate_id'),
+    氏名: getColumnIndex('氏名'),
     最終更新日時: getColumnIndex('最終更新日時'),
     最新_合格可能性: getColumnIndex('最新_合格可能性'),
     前回_合格可能性: getColumnIndex('前回_合格可能性'),
@@ -386,6 +391,7 @@ function migrateDataFromCandidatesMaster() {
     // Candidate_Scores用のデータ
     scoresData.push([
       candidateId,
+      row[colIndexes.氏名] || '',
       row[colIndexes.最終更新日時] || '',
       row[colIndexes.最新_合格可能性] || '',
       row[colIndexes.前回_合格可能性] || '',
@@ -410,6 +416,7 @@ function migrateDataFromCandidatesMaster() {
     // Candidate_Insights用のデータ
     insightsData.push([
       candidateId,
+      row[colIndexes.氏名] || '',
       row[colIndexes.最終更新日時] || '',
       row[colIndexes.コアモチベーション] || '',
       row[colIndexes.主要懸念事項] || '',
@@ -472,42 +479,54 @@ function reconstructCandidatesMaster() {
     return index;
   }
 
-  // 残す列のインデックス
+  // 残す列のインデックス（既存データから取得）
   const keepColumns = [
-    getColumnIndex('candidate_id'),           // A
-    getColumnIndex('氏名'),                   // B
-    getColumnIndex('現在ステータス'),         // C
-    getColumnIndex('最終更新日時'),           // D
-    getColumnIndex('採用区分'),               // E
-    getColumnIndex('担当面接官'),             // F
-    getColumnIndex('応募日'),                 // G
-    getColumnIndex('メールアドレス'),         // H
-    getColumnIndex('初回面談日'),             // I
-    getColumnIndex('1次面接日'),              // J
-    getColumnIndex('2次面接日'),              // K
-    getColumnIndex('最終面接日'),             // L
-    getColumnIndex('最新_合格可能性'),        // M（参照）
-    getColumnIndex('最新_承諾可能性（統合）'), // N（参照）
-    // O列: 総合ランク（新規追加予定）
+    getColumnIndex('candidate_id'),           // 1
+    getColumnIndex('氏名'),                   // 2
+    getColumnIndex('メールアドレス'),         // 3
+    getColumnIndex('現在ステータス'),         // 4
+    getColumnIndex('採用区分'),               // 5
+    getColumnIndex('最終更新日時'),           // 6
+    getColumnIndex('最新_合格可能性'),        // 7（参照）
+    getColumnIndex('最新_承諾可能性（統合）'), // 8（参照）
+    // 9: 総合ランク（新規追加）
+    getColumnIndex('応募日'),                 // 10
+    getColumnIndex('初回面談日'),             // 11
+    getColumnIndex('担当面接官'),             // 12（初回面談担当者として使用）
+    // 13: 面談出席（新規追加）
+    getColumnIndex('1次面接日'),              // 14
+    // 15: 1次面接合否（新規追加）
+    getColumnIndex('2次面接日'),              // 16
+    // 17: 2次面接合否（新規追加）
+    getColumnIndex('最終面接日'),             // 18
+    // 19: 最終面接合否（新規追加）
+    // 20: 内定日（新規追加）
+    // 21: 承諾日時（新規追加）
   ];
 
-  // 新しいヘッダー
+  // 新しいヘッダー（21列）
   const newHeaders = [
     'candidate_id',
     '氏名',
-    '現在ステータス',
-    '最終更新日時',
-    '採用区分',
-    '担当面接官',
-    '応募日',
     'メールアドレス',
-    '初回面談日',
-    '1次面接日',
-    '2次面接日',
-    '最終面接日',
+    '現在ステータス',
+    '採用区分',
+    '最終更新日時',
     '最新_合格可能性',
     '最新_承諾可能性',
-    '総合ランク'
+    '総合ランク',
+    '応募日',
+    '初回面談日',
+    '初回面談担当者',
+    '面談出席',
+    '1次面接日',
+    '1次面接合否',
+    '2次面接日',
+    '2次面接合否',
+    '最終面接日',
+    '最終面接合否',
+    '内定日',
+    '承諾日時'
   ];
 
   // 新しいデータ配列を作成
@@ -520,17 +539,40 @@ function reconstructCandidatesMaster() {
 
     if (!candidateId) continue;
 
-    const newRow = keepColumns.map(colIndex => row[colIndex] || '');
+    // 21列のデータを構築
+    const newRow = [
+      row[keepColumns[0]] || '',  // 1. candidate_id
+      row[keepColumns[1]] || '',  // 2. 氏名
+      row[keepColumns[2]] || '',  // 3. メールアドレス
+      row[keepColumns[3]] || '',  // 4. 現在ステータス
+      row[keepColumns[4]] || '',  // 5. 採用区分
+      row[keepColumns[5]] || '',  // 6. 最終更新日時
+      row[keepColumns[6]] || '',  // 7. 最新_合格可能性（後で数式に置き換え）
+      row[keepColumns[7]] || '',  // 8. 最新_承諾可能性（後で数式に置き換え）
+      '',                         // 9. 総合ランク（後で計算）
+      row[keepColumns[8]] || '',  // 10. 応募日
+      row[keepColumns[9]] || '',  // 11. 初回面談日
+      row[keepColumns[10]] || '', // 12. 初回面談担当者
+      '',                         // 13. 面談出席（新規追加）
+      row[keepColumns[11]] || '', // 14. 1次面接日
+      '',                         // 15. 1次面接合否（新規追加）
+      row[keepColumns[12]] || '', // 16. 2次面接日
+      '',                         // 17. 2次面接合否（新規追加）
+      row[keepColumns[13]] || '', // 18. 最終面接日
+      '',                         // 19. 最終面接合否（新規追加）
+      '',                         // 20. 内定日（新規追加）
+      ''                          // 21. 承諾日時（新規追加）
+    ];
 
-    // 総合ランク（新規列）を追加
-    const acceptanceRate = row[keepColumns[13]] || 0;
+    // 総合ランク（9列目）を計算
+    const acceptanceRate = row[keepColumns[7]] || 0;
     let rank = 'E';
     if (acceptanceRate >= 80) rank = 'A';
     else if (acceptanceRate >= 70) rank = 'B';
     else if (acceptanceRate >= 60) rank = 'C';
     else if (acceptanceRate >= 50) rank = 'D';
+    newRow[8] = rank;
 
-    newRow.push(rank);
     newData.push(newRow);
   }
 
@@ -564,25 +606,68 @@ function reconstructCandidatesMaster() {
   headerRange.setFontWeight('bold');
   headerRange.setHorizontalAlignment('center');
 
-  // M列とN列を数式に変更（参照）
+  // G列とH列を数式に変更（Candidate_Scoresから参照）
   for (let i = 2; i <= newData.length; i++) {
-    const candidateId = masterSheet.getRange(i, 1).getValue();
-
-    // M列: 最新_合格可能性（Candidate_Scoresから参照）
-    masterSheet.getRange(i, 13).setFormula(
-      `=IFERROR(VLOOKUP(A${i},Candidate_Scores!A:C,3,FALSE),"")`
+    // G列: 最新_合格可能性（Candidate_Scoresから参照）
+    masterSheet.getRange(i, 7).setFormula(
+      `=IFERROR(VLOOKUP(A${i},Candidate_Scores!A:D,4,FALSE),"")`
     );
 
-    // N列: 最新_承諾可能性（Candidate_Scoresから参照）
-    masterSheet.getRange(i, 14).setFormula(
-      `=IFERROR(VLOOKUP(A${i},Candidate_Scores!A:M,13,FALSE),"")`
+    // H列: 最新_承諾可能性（Candidate_Scoresから参照）
+    masterSheet.getRange(i, 8).setFormula(
+      `=IFERROR(VLOOKUP(A${i},Candidate_Scores!A:N,14,FALSE),"")`
     );
+  }
+
+  // データ検証（プルダウン）を設定
+  const dataRowCount = newData.length - 1; // ヘッダーを除く
+  if (dataRowCount > 0) {
+    // M列（13列目）: 面談出席（出席、欠席）
+    const attendanceRange = masterSheet.getRange(2, 13, dataRowCount, 1);
+    const attendanceRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['出席', '欠席'], true)
+      .setAllowInvalid(false)
+      .build();
+    attendanceRange.setDataValidation(attendanceRule);
+
+    // O列（15列目）: 1次面接合否（合格、不合格、欠席）
+    const interview1Range = masterSheet.getRange(2, 15, dataRowCount, 1);
+    const interviewRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['合格', '不合格', '欠席'], true)
+      .setAllowInvalid(false)
+      .build();
+    interview1Range.setDataValidation(interviewRule);
+
+    // Q列（17列目）: 2次面接合否（合格、不合格、欠席）
+    const interview2Range = masterSheet.getRange(2, 17, dataRowCount, 1);
+    interview2Range.setDataValidation(interviewRule);
+
+    // S列（19列目）: 最終面接合否（合格、不合格、欠席）
+    const finalInterviewRange = masterSheet.getRange(2, 19, dataRowCount, 1);
+    finalInterviewRange.setDataValidation(interviewRule);
+
+    // T列（20列目）、U列（21列目）: 日付形式
+    const offerDateRange = masterSheet.getRange(2, 20, dataRowCount, 1);
+    const acceptDateRange = masterSheet.getRange(2, 21, dataRowCount, 1);
+    const dateRule = SpreadsheetApp.newDataValidation()
+      .requireDate()
+      .setAllowInvalid(false)
+      .build();
+    offerDateRange.setDataValidation(dateRule);
+    acceptDateRange.setDataValidation(dateRule);
   }
 
   // 列幅を調整
   masterSheet.setColumnWidth(1, 120);  // candidate_id
   masterSheet.setColumnWidth(2, 150);  // 氏名
-  for (let i = 3; i <= newHeaders.length; i++) {
+  masterSheet.setColumnWidth(3, 200);  // メールアドレス
+  masterSheet.setColumnWidth(4, 130);  // 現在ステータス
+  masterSheet.setColumnWidth(5, 100);  // 採用区分
+  masterSheet.setColumnWidth(6, 150);  // 最終更新日時
+  masterSheet.setColumnWidth(7, 130);  // 最新_合格可能性
+  masterSheet.setColumnWidth(8, 130);  // 最新_承諾可能性
+  masterSheet.setColumnWidth(9, 100);  // 総合ランク
+  for (let i = 10; i <= newHeaders.length; i++) {
     masterSheet.setColumnWidth(i, 130);
   }
 
@@ -590,6 +675,7 @@ function reconstructCandidatesMaster() {
   masterSheet.setFrozenRows(1);
 
   Logger.log(`✅ Candidates_Masterを再構成: ${newHeaders.length}列`);
+  Logger.log(`✅ データ検証（プルダウン）を設定完了`);
   Logger.log('====================================');
   Logger.log('✅ Candidates_Master再構成完了');
   Logger.log('====================================');
@@ -1018,9 +1104,9 @@ function executeStep3AndStep4() {
     Logger.log('########################################');
     Logger.log('');
     Logger.log('📊 最終確認事項:');
-    Logger.log('1. Candidates_Masterが15列になっているか');
-    Logger.log('2. Candidate_Scoresにデータがあるか');
-    Logger.log('3. Candidate_Insightsにデータがあるか');
+    Logger.log('1. Candidates_Masterが21列になっているか');
+    Logger.log('2. Candidate_ScoresとCandidate_Insightsに氏名列があるか');
+    Logger.log('3. データ検証（プルダウン）が設定されているか');
     Logger.log('4. Dify_Workflow_Logが非表示になっているか');
     Logger.log('5. 4つのシートが削除されているか');
     Logger.log('6. 既存シートに列が追加されているか');
@@ -1083,15 +1169,15 @@ function verifyFormulas() {
   Logger.log('数式チェック');
   Logger.log('====================================');
 
-  // M列（最新_合格可能性）の数式を確認
-  const formulaM = masterSheet.getRange(2, 13).getFormula();
-  Logger.log('M列の数式: ' + formulaM);
+  // G列（最新_合格可能性）の数式を確認
+  const formulaG = masterSheet.getRange(2, 7).getFormula();
+  Logger.log('G列の数式: ' + formulaG);
 
-  // N列（最新_承諾可能性）の数式を確認
-  const formulaN = masterSheet.getRange(2, 14).getFormula();
-  Logger.log('N列の数式: ' + formulaN);
+  // H列（最新_承諾可能性）の数式を確認
+  const formulaH = masterSheet.getRange(2, 8).getFormula();
+  Logger.log('H列の数式: ' + formulaH);
 
-  if (formulaM.includes('VLOOKUP') && formulaN.includes('VLOOKUP')) {
+  if (formulaG.includes('VLOOKUP') && formulaH.includes('VLOOKUP')) {
     Logger.log('✅ 数式が正しく設定されています');
   } else {
     Logger.log('⚠️ 数式が設定されていません');
