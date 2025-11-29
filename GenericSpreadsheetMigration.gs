@@ -702,11 +702,12 @@ function runHealthCheck() {
 
   Logger.log(message);
 
-  SpreadsheetApp.getUi().alert(
-    'システム健全性チェック',
-    message,
-    SpreadsheetApp.getUi().ButtonSet.OK
-  );
+  // スクリプトエディタから実行する場合はLogger.logでチェック結果を確認してください
+  // SpreadsheetApp.getUi().alert(
+  //   'システム健全性チェック',
+  //   message,
+  //   SpreadsheetApp.getUi().ButtonSet.OK
+  // );
 
   Logger.log('====================================');
 
