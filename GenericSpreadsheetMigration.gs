@@ -919,7 +919,8 @@ function executeCompleteImplementation() {
 
     // Phase 4: カスタムメニュー
     Logger.log('Phase 4: UIセットアップ');
-    onOpen(); // メニューを再読み込み
+    // onOpen(); // メニューはスプレッドシートを再度開いた際に自動的に読み込まれます
+    Logger.log('カスタムメニューはスプレッドシートを再度開いた際に自動的に表示されます');
     Logger.log('');
 
     // 最終確認
@@ -931,17 +932,19 @@ function executeCompleteImplementation() {
     Logger.log('# ✅ 実装完了 #');
     Logger.log('########################################');
     Logger.log('');
+    Logger.log(`✅ データ移行完了: バックアップから${extracted.dataCount}件のデータを移行しました`);
+    Logger.log('');
     Logger.log('次のアクション:');
     Logger.log('1. 各シートのデータを確認');
     Logger.log('2. メニューから「動作確認」を実行');
     Logger.log('3. 問題なければ本番運用開始');
 
-    SpreadsheetApp.getUi().alert(
-      '✅ データ移行完了',
-      `バックアップから${extracted.dataCount}件のデータを移行しました。\n\n` +
-      'Candidate_Scores と Candidate_Insights を確認してください。',
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
+    // SpreadsheetApp.getUi().alert(
+    //   '✅ データ移行完了',
+    //   `バックアップから${extracted.dataCount}件のデータを移行しました。\n\n` +
+    //   'Candidate_Scores と Candidate_Insights を確認してください。',
+    //   SpreadsheetApp.getUi().ButtonSet.OK
+    // );
 
   } catch (error) {
     Logger.log('');
@@ -951,11 +954,14 @@ function executeCompleteImplementation() {
     Logger.log('スタックトレース:');
     Logger.log(error.stack);
 
-    SpreadsheetApp.getUi().alert(
-      '❌ エラー発生',
-      'データ移行中にエラーが発生しました:\n\n' + error.toString(),
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
+    // スクリプトエディタから実行する場合はLogger.logでエラーを確認してください
+    // SpreadsheetApp.getUi().alert(
+    //   '❌ エラー発生',
+    //   'データ移行中にエラーが発生しました:\n\n' + error.toString(),
+    //   SpreadsheetApp.getUi().ButtonSet.OK
+    // );
+
+    throw error; // エラーを再スローして実行ログに表示
   }
 }
 
