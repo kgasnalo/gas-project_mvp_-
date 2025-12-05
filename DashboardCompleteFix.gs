@@ -29,12 +29,12 @@
  * - 候補者リスト: 正しいスコアとステータスが表示される
  */
 
-const SPREADSHEET_ID = '1CDsorhyXBj8aHcBoYFAT9S4FfpNQOvayeOAsOtkqsuM';
-
 /**
  * Dashboard完全修正のメイン関数
  */
 function fixDashboardComplete() {
+  // 既存のSpreadsheetCompleteFix.gsのSPREADSHEET_IDを使用
+  // const SPREADSHEET_ID = '1CDsorhyXBj8aHcBoYFAT9S4FfpNQOvayeOAsOtkqsuM';
   Logger.log('========================================');
   Logger.log('📊 Dashboard完全修正を開始');
   Logger.log('========================================');
@@ -102,7 +102,7 @@ function fixDashboardComplete() {
  * Candidates_Masterの列構成を確認
  */
 function verifyCandidatesMasterColumns() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const masterSheet = ss.getSheetByName('Candidates_Master');
 
   if (!masterSheet) {
@@ -145,7 +145,7 @@ function verifyCandidatesMasterColumns() {
  * DashboardのKPI指標を修正
  */
 function fixDashboardKPIs() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashboardSheet = ss.getSheetByName('Dashboard');
 
   if (!dashboardSheet) {
@@ -201,7 +201,7 @@ function fixDashboardKPIs() {
  * 候補者ランキングのQUERY関数を修正
  */
 function fixDashboardRanking() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashboardSheet = ss.getSheetByName('Dashboard');
 
   if (!dashboardSheet) {
@@ -251,7 +251,7 @@ function fixDashboardRanking() {
  * リスク候補者アラートのQUERY関数を修正
  */
 function fixDashboardRiskAlert() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashboardSheet = ss.getSheetByName('Dashboard');
 
   if (!dashboardSheet) {
@@ -294,7 +294,7 @@ function fixDashboardRiskAlert() {
  * 推奨アクションのQUERY関数を修正
  */
 function fixDashboardRecommendedActions() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashboardSheet = ss.getSheetByName('Dashboard');
 
   if (!dashboardSheet) {
@@ -354,7 +354,7 @@ function fixDashboardRecommendedActions() {
  * Dashboard修正の最終確認
  */
 function verifyDashboardFixes() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashboardSheet = ss.getSheetByName('Dashboard');
 
   if (!dashboardSheet) {
@@ -428,7 +428,7 @@ function verifyDashboardFixes() {
  * デバッグ用: Dashboardの全データを表示
  */
 function debugShowDashboardData() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashboardSheet = ss.getSheetByName('Dashboard');
 
   if (!dashboardSheet) {
