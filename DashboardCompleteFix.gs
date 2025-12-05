@@ -159,8 +159,8 @@ function fixDashboardKPIs() {
   dashboardSheet.getRange('B5').setFormula(b5Formula);
   Logger.log('  B5（総候補者数）: ' + b5Formula);
 
-  // B6: 平均承諾可能性（R列 → H列に修正）
-  const b6Formula = '=ROUND(AVERAGE(Candidates_Master!H:H),1) & "点"';
+  // B6: 平均承諾可能性（R列 → H列に修正、空セル除外）
+  const b6Formula = '=IF(COUNTIF(Candidates_Master!H:H,">0")>0,ROUND(AVERAGEIF(Candidates_Master!H:H,">0"),1),"N/A") & "点"';
   dashboardSheet.getRange('B6').setFormula(b6Formula);
   Logger.log('  B6（平均承諾可能性）: ' + b6Formula);
 
