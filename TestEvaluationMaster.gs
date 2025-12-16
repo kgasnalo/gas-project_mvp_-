@@ -51,24 +51,33 @@ function testEvaluationMasterCreation() {
     const evaluationId = writeToEvaluationMaster(testData);
     Logger.log(`✅ Test completed: ${evaluationId}`);
 
-    // 成功メッセージを表示
-    SpreadsheetApp.getUi().alert(
-      '✅ テストが完了しました\n\n' +
-      `評価ID: ${evaluationId}\n` +
-      '候補者名: 山田太郎\n' +
-      '総合スコア: 72点 (ランク: C)\n\n' +
-      'Evaluation_Masterシートを確認してください。'
-    );
+    // 成功メッセージを表示（UIが利用可能な場合のみ）
+    try {
+      SpreadsheetApp.getUi().alert(
+        '✅ テストが完了しました\n\n' +
+        `評価ID: ${evaluationId}\n` +
+        '候補者名: 山田太郎\n' +
+        '総合スコア: 72点 (ランク: C)\n\n' +
+        'Evaluation_Masterシートを確認してください。'
+      );
+    } catch (uiError) {
+      Logger.log('✅ テスト完了（UI表示スキップ）: ' + evaluationId);
+    }
 
   } catch (error) {
     Logger.log('❌ テストエラー: ' + error.message);
     Logger.log(error.stack);
 
-    SpreadsheetApp.getUi().alert(
-      '❌ テストに失敗しました\n\n' +
-      'エラー: ' + error.message + '\n\n' +
-      '詳細はログを確認してください（表示 → ログ）'
-    );
+    // エラーメッセージを表示（UIが利用可能な場合のみ）
+    try {
+      SpreadsheetApp.getUi().alert(
+        '❌ テストに失敗しました\n\n' +
+        'エラー: ' + error.message + '\n\n' +
+        '詳細はログを確認してください（表示 → ログ）'
+      );
+    } catch (uiError) {
+      // UI表示できない場合はログのみ
+    }
 
     throw error;
   }
@@ -164,21 +173,31 @@ function testMultipleEvaluationData() {
     Logger.log('\n========== 複数データテスト完了 ==========');
     Logger.log(`追加した評価ID: ${evaluationIds.join(', ')}`);
 
-    SpreadsheetApp.getUi().alert(
-      '✅ 複数データテストが完了しました\n\n' +
-      `追加件数: ${evaluationIds.length}件\n\n` +
-      '評価ID:\n' + evaluationIds.join('\n') + '\n\n' +
-      'Evaluation_Masterシートを確認してください。'
-    );
+    // 成功メッセージを表示（UIが利用可能な場合のみ）
+    try {
+      SpreadsheetApp.getUi().alert(
+        '✅ 複数データテストが完了しました\n\n' +
+        `追加件数: ${evaluationIds.length}件\n\n` +
+        '評価ID:\n' + evaluationIds.join('\n') + '\n\n' +
+        'Evaluation_Masterシートを確認してください。'
+      );
+    } catch (uiError) {
+      Logger.log('✅ 複数データテスト完了（UI表示スキップ）');
+    }
 
   } catch (error) {
     Logger.log('❌ 複数データテストエラー: ' + error.message);
     Logger.log(error.stack);
 
-    SpreadsheetApp.getUi().alert(
-      '❌ テストに失敗しました\n\n' +
-      'エラー: ' + error.message
-    );
+    // エラーメッセージを表示（UIが利用可能な場合のみ）
+    try {
+      SpreadsheetApp.getUi().alert(
+        '❌ テストに失敗しました\n\n' +
+        'エラー: ' + error.message
+      );
+    } catch (uiError) {
+      // UI表示できない場合はログのみ
+    }
 
     throw error;
   }
