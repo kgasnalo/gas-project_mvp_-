@@ -19,74 +19,88 @@ function getWebhookUrl() {
 }
 
 /**
- * DifyからのWebhookを受信
- * POST: /exec
- * Body: JSON形式のデータ
- *
- * 【Difyからのデータ形式（想定）】
- * {
- *   "type": "evaluation" | "engagement",
- *   "candidate_id": "C001",
- *   "data": { ... }
- * }
+ * Phase 1-1: Dify Webhookエンドポイント（テストモード）
+ * 目的: データ受信確認とProcessing_Logへの記録
  */
 function doPost(e) {
+  const startTime = new Date();
+
   try {
-    // リクエストボディを取得
-    const requestBody = e.postData.contents;
-    Logger.log('Received webhook: ' + requestBody);
+    // リクエストボディの取得
+    const requestBody = e.postData ? e.postData.contents : null;
 
-    // JSONをパース
-    const data = JSON.parse(requestBody);
-
-    // データタイプに応じて処理を分岐
-    switch (data.type) {
-      case 'evaluation':
-        handleEvaluationData(data);
-        break;
-      case 'engagement':
-        handleEngagementData(data);
-        break;
-      case 'evidence':
-        handleEvidenceData(data);
-        break;
-      case 'risk':
-        handleRiskData(data);
-        break;
-      case 'next_q':
-        handleNextQData(data);
-        break;
-      case 'acceptance_story':
-        handleAcceptanceStoryData(data);
-        break;
-      case 'competitor_comparison':
-        handleCompetitorComparisonData(data);
-        break;
-      default:
-        throw new Error('Unknown data type: ' + data.type);
+    if (!requestBody) {
+      throw new Error('リクエストボディが空です');
     }
 
-    // 成功レスポンスを返す
-    return ContentService.createTextOutput(
-      JSON.stringify({
-        status: 'success',
-        message: 'Data processed successfully',
-        timestamp: new Date().toISOString()
-      })
-    ).setMimeType(ContentService.MimeType.JSON);
+    // JSONパース
+    const data = JSON.parse(requestBody);
+
+    // ログ出力
+    Logger.log('=== Phase 1-1 テストモード ===');
+    Logger.log('受信時刻: ' + new Date().toISOString());
+    Logger.log('データサイズ: ' + requestBody.length + ' bytes');
+    Logger.log('candidate_name: ' + (data.validated_input ? data.validated_input.candidate_name : 'なし'));
+    Logger.log('transcript有無: ' + (data.transcript ? 'あり(' + data.transcript.length + '文字)' : 'なし'));
+
+    // Processing_Logに記録
+    const sheet = SpreadsheetApp
+      .getActiveSpreadsheet()
+      .getSheetByName('Processing_Log');
+
+    if (sheet) {
+      const logRow = [
+        new Date(),                                    // A: timestamp
+        'Phase1-1_Test',                              // B: phase
+        data.validated_input ? data.validated_input.candidate_name : 'Unknown',  // C: candidate
+        'webhook_test',                                // D: event
+        'SUCCESS',                                     // E: status
+        JSON.stringify(data.validated_input || {}).substring(0, 500),  // F: input_data
+        'transcript: ' + (data.transcript ? data.transcript.length + '文字' : 'なし'),  // G: output_data
+        '実行時間: ' + ((new Date() - startTime) / 1000).toFixed(2) + '秒'  // H: notes
+      ];
+
+      sheet.appendRow(logRow);
+      Logger.log('✅ Processing_Logに記録完了');
+    } else {
+      Logger.log('⚠️ Processing_Logシートが見つかりません');
+    }
+
+    // 成功レスポンス
+    const response = {
+      success: true,
+      mode: 'TEST_MODE',
+      message: 'Phase 1-1: データ受信成功（テストモード）',
+      received: {
+        candidate_id: data.validated_input ? data.validated_input.candidate_id : null,
+        candidate_name: data.validated_input ? data.validated_input.candidate_name : null,
+        recruit_type: data.validated_input ? data.validated_input.recruit_type : null,
+        selection_phase: data.validated_input ? data.validated_input.selection_phase : null,
+        has_transcript: !!data.transcript,
+        transcript_length: data.transcript ? data.transcript.length : 0
+      },
+      timestamp: new Date().toISOString(),
+      execution_time_seconds: ((new Date() - startTime) / 1000).toFixed(2)
+    };
+
+    return ContentService
+      .createTextOutput(JSON.stringify(response, null, 2))
+      .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
-    Logger.log('Error in doPost: ' + error.message);
-    Logger.log(error.stack);
+    Logger.log('❌ エラー発生: ' + error.message);
+    Logger.log('スタック: ' + error.stack);
 
-    // エラーレスポンスを返す
-    return ContentService.createTextOutput(
-      JSON.stringify({
-        status: 'error',
-        message: error.message,
+    // エラーレスポンス
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: false,
+        mode: 'TEST_MODE',
+        error: error.message,
+        stack: error.stack,
         timestamp: new Date().toISOString()
-      })
-    ).setMimeType(ContentService.MimeType.JSON);
+      }, null, 2))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
