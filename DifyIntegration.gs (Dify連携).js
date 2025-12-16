@@ -538,34 +538,44 @@ function checkProcessingLog() {
     isValid = false;
   }
 
-  // 結果をUIに表示
+  // 結果をUIに表示（UIコンテキストがある場合のみ）
   if (isValid) {
     Logger.log('✅ Phase 1-1 完全成功！');
     Logger.log('✅ Processing_Logに正しく記録されています');
 
-    SpreadsheetApp.getUi().alert(
-      '🎉 Phase 1-1 完全成功！\n\n' +
-      '【記録内容】\n' +
-      '行番号: ' + lastRow + '\n' +
-      'タイムスタンプ: ' + data[0] + '\n' +
-      'Phase: ' + data[1] + '\n' +
-      '候補者: ' + data[2] + '\n' +
-      'イベント: ' + data[3] + '\n' +
-      'ステータス: ' + data[4] + '\n' +
-      '実行時間: ' + data[7] + '\n\n' +
-      '✅ Processing_Logに正しく記録されています\n' +
-      '✅ Dify → GAS データフロー確立完了'
-    );
+    try {
+      SpreadsheetApp.getUi().alert(
+        '🎉 Phase 1-1 完全成功！\n\n' +
+        '【記録内容】\n' +
+        '行番号: ' + lastRow + '\n' +
+        'タイムスタンプ: ' + data[0] + '\n' +
+        'Phase: ' + data[1] + '\n' +
+        '候補者: ' + data[2] + '\n' +
+        'イベント: ' + data[3] + '\n' +
+        'ステータス: ' + data[4] + '\n' +
+        '実行時間: ' + data[7] + '\n\n' +
+        '✅ Processing_Logに正しく記録されています\n' +
+        '✅ Dify → GAS データフロー確立完了'
+      );
+    } catch (e) {
+      // UIコンテキストがない場合はログのみ
+      Logger.log('ℹ️ UIアラートをスキップ（UIコンテキストなし）');
+    }
   } else {
     Logger.log('⚠️ 一部データが期待値と異なります');
 
-    SpreadsheetApp.getUi().alert(
-      '⚠️ データ不一致\n\n' +
-      '一部データが期待値と異なります:\n\n' +
-      errorMessages.join('\n') + '\n\n' +
-      '詳細はログを確認してください。\n' +
-      '（表示 → ログ）'
-    );
+    try {
+      SpreadsheetApp.getUi().alert(
+        '⚠️ データ不一致\n\n' +
+        '一部データが期待値と異なります:\n\n' +
+        errorMessages.join('\n') + '\n\n' +
+        '詳細はログを確認してください。\n' +
+        '（表示 → ログ）'
+      );
+    } catch (e) {
+      // UIコンテキストがない場合はログのみ
+      Logger.log('ℹ️ UIアラートをスキップ（UIコンテキストなし）');
+    }
   }
 
   return isValid;
