@@ -363,3 +363,92 @@ function testWebhook() {
     '詳細はログを確認してください（表示 → ログ）'
   );
 }
+
+/**
+ * Evaluation_Masterシートにデータを書き込む
+ */
+function writeToEvaluationMaster(data) {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('Evaluation_Master');
+
+  if (!sheet) {
+    throw new Error('Evaluation_Master sheet not found');
+  }
+
+  // 評価IDの生成
+  const evaluationId = generateEvaluationId();
+
+  // 行データの組み立て
+  const row = [
+    evaluationId,                           // A: 評価ID
+    data.interview_datetime || '',          // B: 面接日時
+    data.candidate_id || '',                // C: 候補者ID
+    data.candidate_name || '',              // D: 候補者氏名
+    data.recruit_type || '',                // E: 採用区分
+    data.selection_phase || '',             // F: 選考フェーズ
+    data.dify_report_url || '',             // G: ドキュメントURL
+
+    // Philosophy
+    data.philosophy_rank || '',             // H
+    data.philosophy_score || 0,             // I
+    data.philosophy_reason || '',           // J
+
+    // Strategy
+    data.strategy_rank || '',               // K
+    data.strategy_score || 0,               // L
+    data.strategy_reason || '',             // M
+
+    // Motivation
+    data.motivation_rank || '',             // N
+    data.motivation_score || 0,             // O
+    data.motivation_reason || '',           // P
+
+    // Execution
+    data.execution_rank || '',              // Q
+    data.execution_score || 0,              // R
+    data.execution_reason || '',            // S
+
+    // 総合
+    data.total_score || 0,                  // T
+    data.total_rank || '',                  // U
+    data.summary || '',                     // V
+
+    // その他
+    data.transcript || '',                  // W
+    data.interview_memo || '',              // X
+    data.concerns || '',                    // Y
+    data.next_check_points || '',           // Z
+    new Date(),                             // AA
+    data.workflow_id || ''                  // AB
+  ];
+
+  // データを追加
+  sheet.appendRow(row);
+
+  Logger.log(`Evaluation data written: ${evaluationId}`);
+  return evaluationId;
+}
+
+/**
+ * 評価ID生成関数
+ * 形式: EVAL_YYYYMMDD_NNN
+ */
+function generateEvaluationId() {
+  const now = new Date();
+  const dateStr = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyyMMdd');
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('Evaluation_Master');
+
+  // 今日の評価数をカウント
+  const data = sheet.getDataRange().getValues();
+  const todayPrefix = `EVAL_${dateStr}_`;
+  const todayCount = data.filter(row =>
+    String(row[0]).startsWith(todayPrefix)
+  ).length;
+
+  const sequence = String(todayCount + 1).padStart(3, '0');
+  return `${todayPrefix}${sequence}`;
+}

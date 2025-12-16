@@ -1360,3 +1360,118 @@ function setupSurveyAnalysis() {
   }
 }
 
+/**
+ * Evaluation_Masterシートを作成
+ * Difyの面接解析結果を評価項目別に一元管理するシート
+ */
+function createEvaluationMasterSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 既存シートをチェック
+  let sheet = ss.getSheetByName('Evaluation_Master');
+  if (sheet) {
+    Logger.log('Evaluation_Master already exists');
+    return sheet;
+  }
+
+  // 新規シート作成
+  sheet = ss.insertSheet('Evaluation_Master');
+
+  // ヘッダー行設定
+  const headers = [
+    '評価ID',
+    '面接日時',
+    '候補者ID',
+    '候補者氏名',
+    '採用区分',
+    '選考フェーズ',
+    'ドキュメントURL',
+    'Philosophy_ランク',
+    'Philosophy_スコア',
+    'Philosophy_評価理由',
+    'Strategy_ランク',
+    'Strategy_スコア',
+    'Strategy_評価理由',
+    'Motivation_ランク',
+    'Motivation_スコア',
+    'Motivation_評価理由',
+    'Execution_ランク',
+    'Execution_スコア',
+    'Execution_評価理由',
+    '総合スコア',
+    '総合ランク',
+    '総評',
+    '議事録',
+    '面接官メモ',
+    '懸念事項',
+    '次回確認事項',
+    '最終更新日時',
+    'Dify_workflow_id'
+  ];
+
+  // ヘッダー行を書き込み（1行目）
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+  // ヘッダー行の書式設定
+  const headerRange = sheet.getRange(1, 1, 1, headers.length);
+  headerRange.setBackground('#4A90E2');
+  headerRange.setFontColor('#FFFFFF');
+  headerRange.setFontWeight('bold');
+  headerRange.setHorizontalAlignment('center');
+  headerRange.setVerticalAlignment('middle');
+
+  // 列幅の調整
+  sheet.setColumnWidth(1, 180);  // A: 評価ID
+  sheet.setColumnWidth(2, 150);  // B: 面接日時
+  sheet.setColumnWidth(3, 120);  // C: 候補者ID
+  sheet.setColumnWidth(4, 120);  // D: 候補者氏名
+  sheet.setColumnWidth(5, 80);   // E: 採用区分
+  sheet.setColumnWidth(6, 100);  // F: 選考フェーズ
+  sheet.setColumnWidth(7, 300);  // G: ドキュメントURL
+
+  // Philosophy (H-J)
+  sheet.setColumnWidth(8, 80);   // H: ランク
+  sheet.setColumnWidth(9, 80);   // I: スコア
+  sheet.setColumnWidth(10, 400); // J: 評価理由
+
+  // Strategy (K-M)
+  sheet.setColumnWidth(11, 80);  // K: ランク
+  sheet.setColumnWidth(12, 80);  // L: スコア
+  sheet.setColumnWidth(13, 400); // M: 評価理由
+
+  // Motivation (N-P)
+  sheet.setColumnWidth(14, 80);  // N: ランク
+  sheet.setColumnWidth(15, 80);  // O: スコア
+  sheet.setColumnWidth(16, 400); // P: 評価理由
+
+  // Execution (Q-S)
+  sheet.setColumnWidth(17, 80);  // Q: ランク
+  sheet.setColumnWidth(18, 80);  // R: スコア
+  sheet.setColumnWidth(19, 400); // S: 評価理由
+
+  // 総合 (T-V)
+  sheet.setColumnWidth(20, 100); // T: 総合スコア
+  sheet.setColumnWidth(21, 80);  // U: 総合ランク
+  sheet.setColumnWidth(22, 500); // V: 総評
+
+  // その他 (W-AB)
+  sheet.setColumnWidth(23, 600); // W: 議事録
+  sheet.setColumnWidth(24, 300); // X: 面接官メモ
+  sheet.setColumnWidth(25, 300); // Y: 懸念事項
+  sheet.setColumnWidth(26, 300); // Z: 次回確認事項
+  sheet.setColumnWidth(27, 150); // AA: 最終更新日時
+  sheet.setColumnWidth(28, 180); // AB: Dify_workflow_id
+
+  // 行の高さ設定（ヘッダー）
+  sheet.setRowHeight(1, 40);
+
+  // 固定行（ヘッダー行を固定）
+  sheet.setFrozenRows(1);
+
+  // 固定列（候補者氏名まで固定）
+  sheet.setFrozenColumns(4);
+
+  Logger.log('✅ Evaluation_Master sheet created successfully');
+  return sheet;
+}
+

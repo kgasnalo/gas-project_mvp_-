@@ -10,6 +10,7 @@ const CONFIG = {
     COMPANY_ASSETS: 'Company_Assets',
     COMPETITOR_DB: 'Competitor_DB',
     EVALUATION_LOG: 'Evaluation_Log',
+    EVALUATION_MASTER: 'Evaluation_Master', // Phase 4-2: 評価マスター
     ENGAGEMENT_LOG: 'Engagement_Log',
     EVIDENCE: 'Evidence',
     RISK: 'Risk',
