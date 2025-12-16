@@ -466,3 +466,107 @@ function generateEvaluationId() {
   const sequence = String(todayCount + 1).padStart(3, '0');
   return `${todayPrefix}${sequence}`;
 }
+
+/**
+ * Processing_Log確認関数
+ * Phase 1-1のテスト実行結果を確認
+ */
+function checkProcessingLog() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Processing_Log');
+
+  if (!sheet) {
+    Logger.log('❌ Processing_Logシートが見つかりません');
+    SpreadsheetApp.getUi().alert(
+      '❌ エラー\n\n' +
+      'Processing_Logシートが見つかりません。\n' +
+      'シート名を確認してください。'
+    );
+    return;
+  }
+
+  // 最新行（最後のデータ行）を取得
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow <= 1) {
+    Logger.log('❌ データが記録されていません（ヘッダー行のみ）');
+    SpreadsheetApp.getUi().alert(
+      '❌ データなし\n\n' +
+      'Processing_Logにデータが記録されていません。\n' +
+      'Difyからテスト実行を行ってください。'
+    );
+    return;
+  }
+
+  // 最新行のデータを取得（8列分）
+  const data = sheet.getRange(lastRow, 1, 1, 8).getValues()[0];
+
+  Logger.log('=== Processing_Log 最新行 ===');
+  Logger.log('行番号: ' + lastRow);
+  Logger.log('A列 (timestamp): ' + data[0]);
+  Logger.log('B列 (phase): ' + data[1]);
+  Logger.log('C列 (candidate): ' + data[2]);
+  Logger.log('D列 (event): ' + data[3]);
+  Logger.log('E列 (status): ' + data[4]);
+  Logger.log('F列 (input_data): ' + data[5]);
+  Logger.log('G列 (output_data): ' + data[6]);
+  Logger.log('H列 (notes): ' + data[7]);
+
+  // 期待値との比較
+  const expectedPhase = 'Phase1-1_Test';
+  const expectedCandidate = 'テスト太郎';
+  const expectedStatus = 'SUCCESS';
+
+  let isValid = true;
+  let errorMessages = [];
+
+  if (data[1] !== expectedPhase) {
+    Logger.log('⚠️ Phase が期待値と異なります: ' + data[1]);
+    errorMessages.push('Phase: ' + data[1] + ' (期待値: ' + expectedPhase + ')');
+    isValid = false;
+  }
+
+  if (data[2] !== expectedCandidate) {
+    Logger.log('⚠️ Candidate が期待値と異なります: ' + data[2]);
+    errorMessages.push('Candidate: ' + data[2] + ' (期待値: ' + expectedCandidate + ')');
+    isValid = false;
+  }
+
+  if (data[4] !== expectedStatus) {
+    Logger.log('⚠️ Status が期待値と異なります: ' + data[4]);
+    errorMessages.push('Status: ' + data[4] + ' (期待値: ' + expectedStatus + ')');
+    isValid = false;
+  }
+
+  // 結果をUIに表示
+  if (isValid) {
+    Logger.log('✅ Phase 1-1 完全成功！');
+    Logger.log('✅ Processing_Logに正しく記録されています');
+
+    SpreadsheetApp.getUi().alert(
+      '🎉 Phase 1-1 完全成功！\n\n' +
+      '【記録内容】\n' +
+      '行番号: ' + lastRow + '\n' +
+      'タイムスタンプ: ' + data[0] + '\n' +
+      'Phase: ' + data[1] + '\n' +
+      '候補者: ' + data[2] + '\n' +
+      'イベント: ' + data[3] + '\n' +
+      'ステータス: ' + data[4] + '\n' +
+      '実行時間: ' + data[7] + '\n\n' +
+      '✅ Processing_Logに正しく記録されています\n' +
+      '✅ Dify → GAS データフロー確立完了'
+    );
+  } else {
+    Logger.log('⚠️ 一部データが期待値と異なります');
+
+    SpreadsheetApp.getUi().alert(
+      '⚠️ データ不一致\n\n' +
+      '一部データが期待値と異なります:\n\n' +
+      errorMessages.join('\n') + '\n\n' +
+      '詳細はログを確認してください。\n' +
+      '（表示 → ログ）'
+    );
+  }
+
+  return isValid;
+}
