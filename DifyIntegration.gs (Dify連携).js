@@ -831,6 +831,11 @@ function doPost(e) {
 
     const data = JSON.parse(requestBody);
 
+    // ===== 行動データ取得エンドポイント =====
+    if (data.action === 'get_behavior_data') {
+      return handleGetBehaviorData(data);
+    }
+
     Logger.log('=== Dify Webhook受信 ===');
     Logger.log('Mode: ' + (data.test_mode ? 'TEST' : 'PRODUCTION'));
     Logger.log('Candidate: ' + (data.validated_input ? data.validated_input.candidate_name : 'Unknown'));
@@ -1579,5 +1584,112 @@ function testGetBehaviorData() {
     Logger.log(JSON.stringify(result, null, 2));
   } else {
     Logger.log('❌ テスト失敗');
+  }
+}
+
+// ========================================
+// Phase 2: 行動データ取得エンドポイント
+// ========================================
+
+/**
+ * 行動データ取得エンドポイント
+ * Difyから呼び出される専用エンドポイント
+ *
+ * @param {Object} data - リクエストデータ
+ * @return {ContentService.TextOutput} JSON レスポンス
+ */
+function handleGetBehaviorData(data) {
+  const startTime = new Date();
+
+  try {
+    // candidate_idの取得
+    const candidateId = data.candidate_id;
+
+    if (!candidateId) {
+      throw new Error('candidate_idが必須です');
+    }
+
+    Logger.log('=== 行動データ取得リクエスト ===');
+    Logger.log('candidate_id: ' + candidateId);
+
+    // getBehaviorData()を呼び出し
+    const behaviorData = getBehaviorData(candidateId);
+
+    if (!behaviorData) {
+      // データが見つからない場合もエラーにせず、空データを返す
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: true,
+          data: {
+            candidate_id: candidateId,
+            survey_count: 0,
+            response_count: 0,
+            response_rate: 0,
+            avg_response_time_hours: 0,
+            engagement_score: 0,
+            last_survey_date: null,
+            has_data: false,
+            behavior_summary: "データなし"
+          },
+          message: 'データが見つかりませんでした',
+          execution_time_seconds: ((new Date() - startTime) / 1000).toFixed(2)
+        }, null, 2))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 成功レスポンス
+    Logger.log('✅ 行動データ取得成功');
+    Logger.log('エンゲージメントスコア: ' + behaviorData.engagement_score);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: true,
+        data: behaviorData,
+        message: '行動データ取得成功',
+        execution_time_seconds: ((new Date() - startTime) / 1000).toFixed(2)
+      }, null, 2))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    Logger.log('❌ 行動データ取得エラー: ' + error.message);
+    Logger.log('スタック: ' + error.stack);
+
+    // エラーレスポンス
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: false,
+        error: error.message,
+        stack: error.stack
+      }, null, 2))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * handleGetBehaviorData のテスト
+ */
+function testHandleGetBehaviorData() {
+  Logger.log('=== handleGetBehaviorData テスト ===');
+
+  // モックリクエスト作成
+  const mockData = {
+    action: 'get_behavior_data',
+    candidate_id: 'CAND_20251217034006'  // テスト用ID
+  };
+
+  // handleGetBehaviorData を直接呼び出し
+  const response = handleGetBehaviorData(mockData);
+  const result = JSON.parse(response.getContent());
+
+  Logger.log('レスポンス:');
+  Logger.log(JSON.stringify(result, null, 2));
+
+  // 検証
+  if (result.success) {
+    Logger.log('✅ テスト成功');
+    Logger.log('has_data: ' + result.data.has_data);
+    Logger.log('engagement_score: ' + result.data.engagement_score);
+  } else {
+    Logger.log('❌ テスト失敗: ' + result.error);
   }
 }
