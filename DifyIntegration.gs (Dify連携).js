@@ -1382,3 +1382,202 @@ function testIndividualFunctions() {
     test_candidate_id: testCandidateId
   };
 }
+
+// ========================================
+// Phase 2: 行動データ取得関数
+// ========================================
+
+/**
+ * Survey_Send_Logから候補者の行動データを取得・分析
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {Object} 行動データ（JSON）
+ */
+function getBehaviorData(candidateId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Survey_Send_Log');
+
+  if (!sheet) {
+    Logger.log('Survey_Send_Logシートが見つかりません');
+    return null;
+  }
+
+  // 全データ取得
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  const headers = values[0];
+
+  // candidate_id列のインデックスを取得
+  const candidateIdColIndex = headers.indexOf('candidate_id');
+  if (candidateIdColIndex === -1) {
+    Logger.log('candidate_id列が見つかりません');
+    return null;
+  }
+
+  // 候補者のデータを抽出
+  const candidateRows = [];
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][candidateIdColIndex] === candidateId) {
+      candidateRows.push(values[i]);
+    }
+  }
+
+  if (candidateRows.length === 0) {
+    Logger.log('候補者のデータが見つかりません: ' + candidateId);
+    return {
+      candidate_id: candidateId,
+      survey_count: 0,
+      response_count: 0,
+      response_rate: 0,
+      avg_response_time_hours: 0,
+      engagement_score: 0,
+      last_survey_date: null,
+      has_data: false
+    };
+  }
+
+  // 列インデックス取得
+  const surveyDateCol = headers.indexOf('survey_date') || headers.indexOf('送信日時');
+  const responseStatusCol = headers.indexOf('response_status') || headers.indexOf('回答状況');
+  const responseTimeCol = headers.indexOf('response_time_hours') || headers.indexOf('回答所要時間（時間）');
+  const surveyTypeCol = headers.indexOf('survey_type') || headers.indexOf('サーベイ種類');
+
+  // 統計計算
+  let surveyCount = candidateRows.length;
+  let responseCount = 0;
+  let totalResponseTime = 0;
+  let responseTimeCount = 0;
+  let lastSurveyDate = null;
+
+  candidateRows.forEach(row => {
+    // 回答数カウント
+    if (responseStatusCol !== -1) {
+      const status = row[responseStatusCol];
+      if (status === '回答済み' || status === 'responded' || status === '完了') {
+        responseCount++;
+      }
+    }
+
+    // 回答時間集計
+    if (responseTimeCol !== -1 && row[responseTimeCol]) {
+      const time = parseFloat(row[responseTimeCol]);
+      if (!isNaN(time)) {
+        totalResponseTime += time;
+        responseTimeCount++;
+      }
+    }
+
+    // 最終サーベイ日時
+    if (surveyDateCol !== -1 && row[surveyDateCol]) {
+      const date = new Date(row[surveyDateCol]);
+      if (!lastSurveyDate || date > lastSurveyDate) {
+        lastSurveyDate = date;
+      }
+    }
+  });
+
+  // 回答率
+  const responseRate = surveyCount > 0 ? (responseCount / surveyCount) * 100 : 0;
+
+  // 平均回答時間（時間単位）
+  const avgResponseTimeHours = responseTimeCount > 0 ? totalResponseTime / responseTimeCount : 0;
+
+  // エンゲージメントスコア算出（0-100点）
+  let engagementScore = 0;
+
+  // 回答率の貢献（0-50点）
+  engagementScore += responseRate * 0.5;
+
+  // 回答速度の貢献（0-30点）
+  // 24時間以内: 30点、48時間以内: 20点、72時間以内: 10点、それ以降: 0点
+  if (avgResponseTimeHours > 0) {
+    if (avgResponseTimeHours <= 24) {
+      engagementScore += 30;
+    } else if (avgResponseTimeHours <= 48) {
+      engagementScore += 20;
+    } else if (avgResponseTimeHours <= 72) {
+      engagementScore += 10;
+    }
+  }
+
+  // アクティビティの貢献（0-20点）
+  // 5回以上: 20点、3-4回: 15点、1-2回: 10点
+  if (surveyCount >= 5) {
+    engagementScore += 20;
+  } else if (surveyCount >= 3) {
+    engagementScore += 15;
+  } else if (surveyCount >= 1) {
+    engagementScore += 10;
+  }
+
+  // 結果オブジェクト
+  return {
+    candidate_id: candidateId,
+    survey_count: surveyCount,
+    response_count: responseCount,
+    response_rate: Math.round(responseRate * 10) / 10,  // 小数第1位まで
+    avg_response_time_hours: Math.round(avgResponseTimeHours * 10) / 10,
+    engagement_score: Math.round(engagementScore),
+    last_survey_date: lastSurveyDate ? lastSurveyDate.toISOString() : null,
+    has_data: true,
+    behavior_summary: generateBehaviorSummary(responseRate, avgResponseTimeHours, surveyCount)
+  };
+}
+
+/**
+ * 行動データのサマリーテキスト生成
+ */
+function generateBehaviorSummary(responseRate, avgResponseTime, surveyCount) {
+  let summary = [];
+
+  // 回答率の評価
+  if (responseRate >= 80) {
+    summary.push('非常に高い回答率');
+  } else if (responseRate >= 50) {
+    summary.push('良好な回答率');
+  } else if (responseRate >= 30) {
+    summary.push('やや低い回答率');
+  } else {
+    summary.push('低い回答率');
+  }
+
+  // 回答速度の評価
+  if (avgResponseTime > 0) {
+    if (avgResponseTime <= 24) {
+      summary.push('迅速な回答');
+    } else if (avgResponseTime <= 48) {
+      summary.push('適度な回答速度');
+    } else {
+      summary.push('回答に時間がかかる傾向');
+    }
+  }
+
+  // アクティビティの評価
+  if (surveyCount >= 5) {
+    summary.push('高いエンゲージメント');
+  } else if (surveyCount >= 3) {
+    summary.push('適度なエンゲージメント');
+  } else {
+    summary.push('限定的なエンゲージメント');
+  }
+
+  return summary.join('、');
+}
+
+/**
+ * テスト関数
+ */
+function testGetBehaviorData() {
+  // テスト用候補者ID（実際のIDに置き換えてください）
+  const testCandidateId = 'CAND_20251217034006';
+
+  Logger.log('=== 行動データ取得テスト ===');
+  const result = getBehaviorData(testCandidateId);
+
+  if (result) {
+    Logger.log('✅ テスト成功');
+    Logger.log(JSON.stringify(result, null, 2));
+  } else {
+    Logger.log('❌ テスト失敗');
+  }
+}
