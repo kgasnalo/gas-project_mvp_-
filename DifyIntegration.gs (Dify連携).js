@@ -18,91 +18,6 @@ function getWebhookUrl() {
   return deploymentUrl;
 }
 
-/**
- * Phase 1-1: Dify Webhookエンドポイント（テストモード）
- * 目的: データ受信確認とProcessing_Logへの記録
- */
-function doPost(e) {
-  const startTime = new Date();
-
-  try {
-    // リクエストボディの取得
-    const requestBody = e.postData ? e.postData.contents : null;
-
-    if (!requestBody) {
-      throw new Error('リクエストボディが空です');
-    }
-
-    // JSONパース
-    const data = JSON.parse(requestBody);
-
-    // ログ出力
-    Logger.log('=== Phase 1-1 テストモード ===');
-    Logger.log('受信時刻: ' + new Date().toISOString());
-    Logger.log('データサイズ: ' + requestBody.length + ' bytes');
-    Logger.log('candidate_name: ' + (data.validated_input ? data.validated_input.candidate_name : 'なし'));
-    Logger.log('transcript有無: ' + (data.transcript ? 'あり(' + data.transcript.length + '文字)' : 'なし'));
-
-    // Processing_Logに記録
-    const sheet = SpreadsheetApp
-      .getActiveSpreadsheet()
-      .getSheetByName('Processing_Log');
-
-    if (sheet) {
-      const logRow = [
-        new Date(),                                    // A: timestamp
-        'Phase1-1_Test',                              // B: phase
-        data.validated_input ? data.validated_input.candidate_name : 'Unknown',  // C: candidate
-        'webhook_test',                                // D: event
-        'SUCCESS',                                     // E: status
-        JSON.stringify(data.validated_input || {}).substring(0, 500),  // F: input_data
-        'transcript: ' + (data.transcript ? data.transcript.length + '文字' : 'なし'),  // G: output_data
-        '実行時間: ' + ((new Date() - startTime) / 1000).toFixed(2) + '秒'  // H: notes
-      ];
-
-      sheet.appendRow(logRow);
-      Logger.log('✅ Processing_Logに記録完了');
-    } else {
-      Logger.log('⚠️ Processing_Logシートが見つかりません');
-    }
-
-    // 成功レスポンス
-    const response = {
-      success: true,
-      mode: 'TEST_MODE',
-      message: 'Phase 1-1: データ受信成功（テストモード）',
-      received: {
-        candidate_id: data.validated_input ? data.validated_input.candidate_id : null,
-        candidate_name: data.validated_input ? data.validated_input.candidate_name : null,
-        recruit_type: data.validated_input ? data.validated_input.recruit_type : null,
-        selection_phase: data.validated_input ? data.validated_input.selection_phase : null,
-        has_transcript: !!data.transcript,
-        transcript_length: data.transcript ? data.transcript.length : 0
-      },
-      timestamp: new Date().toISOString(),
-      execution_time_seconds: ((new Date() - startTime) / 1000).toFixed(2)
-    };
-
-    return ContentService
-      .createTextOutput(JSON.stringify(response, null, 2))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch (error) {
-    Logger.log('❌ エラー発生: ' + error.message);
-    Logger.log('スタック: ' + error.stack);
-
-    // エラーレスポンス
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        success: false,
-        mode: 'TEST_MODE',
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString()
-      }, null, 2))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
 
 /**
  * 評価データを処理
@@ -897,20 +812,14 @@ function updateOrInsertCandidateInsights(data) {
 }
 
 // ========================================
-// Phase 1-2: doPost本番モード化の準備
+// Phase 1 本番版: doPost関数
 // ========================================
 
 /**
  * Phase 1 本番版: Dify Webhookエンドポイント
  * テストモードと本番モードの両対応
- *
- * ⚠️ 注意: この関数は既存のdoPost関数（25-105行）を置き換える必要があります
- * 実装手順:
- * 1. 既存のdoPost関数（25-105行）を全て削除
- * 2. 以下のdoPost_Production関数の名前を doPost に変更
- * 3. handleTestMode と logProcessing は既に定義されているのでそのまま使用
  */
-function doPost_Production(e) {
+function doPost(e) {
   const startTime = new Date();
 
   try {
