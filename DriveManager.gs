@@ -143,10 +143,11 @@ function initializeDriveStructure(companyName = "アマネク") {
  *
  * @param {string} recruitType - 採用区分（新卒/中途）
  * @param {string} phase - 選考フェーズ（初回面談/1次面接等）
+ * @param {string} companyName - 企業名（デフォルト: "アマネク"）
  * @return {GoogleAppsScript.Drive.Folder} フェーズフォルダ
  */
-function getOrCreatePhaseFolder(recruitType, phase) {
-  const rootFolder = getOrCreateRootFolder();
+function getOrCreatePhaseFolder(recruitType, phase, companyName = "アマネク") {
+  const rootFolder = getOrCreateRootFolder(companyName);
   const typeFolder = getOrCreateFolder(rootFolder, recruitType);
 
   // フェーズ名の正規化
@@ -171,10 +172,11 @@ function getOrCreatePhaseFolder(recruitType, phase) {
  * @param {string} phase - 選考フェーズ
  * @param {string} candidateId - 候補者ID（CAND_YYYYMMDD_HHMMSS）
  * @param {string} candidateName - 候補者名
+ * @param {string} companyName - 企業名（デフォルト: "アマネク"）
  * @return {GoogleAppsScript.Drive.Folder} 候補者フォルダ
  */
-function getOrCreateCandidateFolder(recruitType, phase, candidateId, candidateName) {
-  const phaseFolder = getOrCreatePhaseFolder(recruitType, phase);
+function getOrCreateCandidateFolder(recruitType, phase, candidateId, candidateName, companyName = "アマネク") {
+  const phaseFolder = getOrCreatePhaseFolder(recruitType, phase, companyName);
 
   // フォルダ名: CAND_20251218_山田太郎
   const folderName = `${candidateId}_${candidateName}`;
@@ -189,12 +191,13 @@ function getOrCreateCandidateFolder(recruitType, phase, candidateId, candidateNa
  * candidate_idで全候補者フォルダを検索
  *
  * @param {string} candidateId - 候補者ID
+ * @param {string} companyName - 企業名（デフォルト: "アマネク"）
  * @return {Array<Object>} フォルダ情報の配列
  */
-function findCandidateFolders(candidateId) {
+function findCandidateFolders(candidateId, companyName = "アマネク") {
   Logger.log(`=== 候補者フォルダ検索: ${candidateId} ===`);
 
-  const rootFolder = getOrCreateRootFolder();
+  const rootFolder = getOrCreateRootFolder(companyName);
   const results = [];
 
   // ルートフォルダ配下を再帰的に検索
@@ -272,14 +275,15 @@ function copyFolderRecursive(sourceFolder, destinationParent) {
  * @param {string} candidateId - 候補者ID
  * @param {string} candidateName - 候補者名
  * @param {string} recruitType - 採用区分
+ * @param {string} companyName - 企業名（デフォルト: "アマネク"）
  * @return {Object} コピー結果
  */
-function copyFolderToGradeB(candidateId, candidateName, recruitType) {
+function copyFolderToGradeB(candidateId, candidateName, recruitType, companyName = "アマネク") {
   Logger.log('=== 評価B以上フォルダへコピー開始 ===');
 
   try {
     // 元フォルダを検索
-    const sourceFolders = findCandidateFolders(candidateId);
+    const sourceFolders = findCandidateFolders(candidateId, companyName);
 
     if (sourceFolders.length === 0) {
       throw new Error(`候補者フォルダが見つかりません: ${candidateId}`);
@@ -289,7 +293,7 @@ function copyFolderToGradeB(candidateId, candidateName, recruitType) {
     const sourceFolder = sourceFolders[0].folder;
 
     // 評価B以上フォルダ取得
-    const gradeBFolder = getOrCreatePhaseFolder(recruitType, '評価B以上');
+    const gradeBFolder = getOrCreatePhaseFolder(recruitType, '評価B以上', companyName);
 
     // 同名フォルダが既に存在するか確認
     const folderName = `${candidateId}_${candidateName}`;
@@ -333,21 +337,22 @@ function copyFolderToGradeB(candidateId, candidateName, recruitType) {
  * @param {string} candidateName - 候補者名
  * @param {string} recruitType - 採用区分
  * @param {string} currentPhase - 現在の選考フェーズ
+ * @param {string} companyName - 企業名（デフォルト: "アマネク"）
  * @return {Object} 移動結果
  */
-function moveFolderToAccepted(candidateId, candidateName, recruitType, currentPhase) {
+function moveFolderToAccepted(candidateId, candidateName, recruitType, currentPhase, companyName = "アマネク") {
   Logger.log('=== 内定・承諾フォルダへ移動開始 ===');
 
   try {
     // 元フォルダを検索
-    const sourceFolders = findCandidateFolders(candidateId);
+    const sourceFolders = findCandidateFolders(candidateId, companyName);
 
     if (sourceFolders.length === 0) {
       throw new Error(`候補者フォルダが見つかりません: ${candidateId}`);
     }
 
     // 内定・承諾フォルダ取得
-    const acceptedFolder = getOrCreatePhaseFolder(recruitType, '内定・承諾');
+    const acceptedFolder = getOrCreatePhaseFolder(recruitType, '内定・承諾', companyName);
 
     // フォルダ名
     const folderName = `${candidateId}_${candidateName}`;
@@ -408,9 +413,11 @@ function moveFolderToAccepted(candidateId, candidateName, recruitType, currentPh
 function testDriveManager() {
   Logger.log('=== DriveManager テスト開始 ===');
 
+  const companyName = 'テスト株式会社';  // 全テストで同じ企業名を使用
+
   // 1. 構造初期化
   Logger.log('--- テスト1: 構造初期化 ---');
-  const initResult = initializeDriveStructure('テスト株式会社');
+  const initResult = initializeDriveStructure(companyName);
   Logger.log('結果: ' + JSON.stringify(initResult, null, 2));
 
   // 2. 候補者フォルダ作成
@@ -421,23 +428,24 @@ function testDriveManager() {
     '新卒',
     '1次面接',
     candidateId,
-    candidateName
+    candidateName,
+    companyName  // 企業名を指定
   );
   Logger.log('フォルダURL: ' + candidateFolder.getUrl());
 
   // 3. フォルダ検索
   Logger.log('--- テスト3: フォルダ検索 ---');
-  const found = findCandidateFolders(candidateId);
+  const found = findCandidateFolders(candidateId, companyName);  // 企業名を指定
   Logger.log(`検索結果: ${found.length}件`);
 
   // 4. 評価B以上にコピー
   Logger.log('--- テスト4: 評価B以上にコピー ---');
-  const copyResult = copyFolderToGradeB(candidateId, candidateName, '新卒');
+  const copyResult = copyFolderToGradeB(candidateId, candidateName, '新卒', companyName);  // 企業名を指定
   Logger.log('結果: ' + JSON.stringify(copyResult, null, 2));
 
   // 5. 内定・承諾に移動
   Logger.log('--- テスト5: 内定・承諾に移動 ---');
-  const moveResult = moveFolderToAccepted(candidateId, candidateName, '新卒', '1次面接');
+  const moveResult = moveFolderToAccepted(candidateId, candidateName, '新卒', '1次面接', companyName);  // 企業名を指定
   Logger.log('結果: ' + JSON.stringify(moveResult, null, 2));
 
   Logger.log('=== DriveManager テスト完了 ===');
