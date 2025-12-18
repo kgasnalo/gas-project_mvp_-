@@ -349,7 +349,17 @@ function writeToEvaluationMaster(data) {
     data.concerns || '',                    // Y
     data.next_check_points || '',           // Z
     new Date(),                             // AA
-    data.workflow_id || ''                  // AB
+    data.workflow_id || '',                 // AB
+
+    // Phase A追加: 次回質問（AC-AG列）
+    data.next_question_1 || '',             // AC
+    data.next_question_2 || '',             // AD
+    data.next_question_3 || '',             // AE
+    data.next_question_4 || '',             // AF
+    data.next_question_5 || '',             // AG
+    data.competitor_analysis || '',         // AH
+    data.evaluation_report_url || '',       // AI
+    data.strategy_report_url || ''          // AJ
   ];
 
   // データを追加
@@ -893,13 +903,123 @@ function doPost(e) {
     }
 
     // 5. Evaluation_Master追加
+    let evaluationMasterData = null;
     if (data.evaluation_master) {
-      const evaluationData = typeof data.evaluation_master === 'string'
+      evaluationMasterData = typeof data.evaluation_master === 'string'
         ? JSON.parse(data.evaluation_master)
         : data.evaluation_master;
-      results.evaluation_master = writeToEvaluationMaster(evaluationData);
+      results.evaluation_master = writeToEvaluationMaster(evaluationMasterData);
       Logger.log('✅ Evaluation_Master: ' + results.evaluation_master);
     }
+
+    // 5.5. レポート生成処理（Phase A追加）
+    Logger.log('=== レポート生成開始 ===');
+
+    try {
+      // 候補者マスターデータの取得
+      const candidateMasterData = typeof data.candidates_master === 'string'
+        ? JSON.parse(data.candidates_master)
+        : data.candidates_master;
+
+      // 承諾可能性データの取得
+      const acceptanceData = typeof data.engagement_log === 'string'
+        ? JSON.parse(data.engagement_log)
+        : data.engagement_log;
+
+      // 評価マスターデータの取得（既にパース済み）
+      const evalData = evaluationMasterData || {};
+
+      // 1. 評価レポート生成
+      if (candidateMasterData && evalData) {
+        const evalReportData = {
+          candidate_name: candidateMasterData['氏名'] || evalData.candidate_name,
+          selection_phase: candidateMasterData['現在ステータス'] || evalData.selection_phase,
+          interview_date: evalData.interview_datetime || '',
+          interviewer: data.validated_input ? data.validated_input.interviewer : '',
+          total_rank: evalData.total_rank,
+          total_score: evalData.total_score,
+          summary: evalData.summary,
+          philosophy_rank: evalData.philosophy_rank,
+          philosophy_score: evalData.philosophy_score,
+          philosophy_reason: evalData.philosophy_reason,
+          strategy_rank: evalData.strategy_rank,
+          strategy_score: evalData.strategy_score,
+          strategy_reason: evalData.strategy_reason,
+          motivation_rank: evalData.motivation_rank,
+          motivation_score: evalData.motivation_score,
+          motivation_reason: evalData.motivation_reason,
+          execution_rank: evalData.execution_rank,
+          execution_score: evalData.execution_score,
+          execution_reason: evalData.execution_reason,
+          next_questions: [
+            evalData.next_question_1,
+            evalData.next_question_2,
+            evalData.next_question_3,
+            evalData.next_question_4,
+            evalData.next_question_5
+          ].filter(q => q),  // 空を除外
+          concerns: evalData.concerns,
+          next_check_points: evalData.next_check_points
+        };
+
+        const evalReportUrl = generateEvaluationReport(evalReportData);
+        Logger.log('✅ 評価レポート生成: ' + evalReportUrl);
+        results.evaluation_report_url = evalReportUrl;
+
+        // Evaluation_MasterにURL記録
+        const evalSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Evaluation_Master');
+        if (evalSheet) {
+          const evalLastRow = evalSheet.getLastRow();
+          evalSheet.getRange(evalLastRow, 35).setValue(evalReportUrl);  // AI列 = 35
+          Logger.log('✅ 評価レポートURL記録: AI列（行' + evalLastRow + '）');
+        }
+      }
+
+      // 2. 戦略レポート生成
+      if (candidateMasterData && acceptanceData) {
+        const strategyReportData = {
+          candidate_name: candidateMasterData['氏名'] || acceptanceData.candidate_name,
+          current_phase: candidateMasterData['現在ステータス'] || '',
+          acceptance_probability: acceptanceData.acceptance_rate_ai || acceptanceData.acceptance_probability,
+          confidence_level: acceptanceData.confidence_level,
+          positive_factors: acceptanceData.key_positive_factors || [],
+          risk_factors: acceptanceData.key_risk_factors || [],
+          acceptance_story: acceptanceData.engagement_strategy ? [
+            acceptanceData.engagement_strategy.immediate_action_24h,
+            acceptanceData.engagement_strategy.followup_action_48h,
+            acceptanceData.engagement_strategy.longterm_action_72h
+          ].filter(s => s) : [],
+          engagement_strategy: acceptanceData.engagement_strategy || {},
+          competitor_analysis: acceptanceData.competitor_analysis ?
+            (typeof acceptanceData.competitor_analysis === 'string' ?
+              acceptanceData.competitor_analysis :
+              JSON.stringify(acceptanceData.competitor_analysis)) : '',
+          recommendation: acceptanceData.recommendation || ''
+        };
+
+        const strategyReportUrl = generateStrategyReport(strategyReportData);
+        Logger.log('✅ 戦略レポート生成: ' + strategyReportUrl);
+        results.strategy_report_url = strategyReportUrl;
+
+        // Evaluation_MasterにURL記録
+        const evalSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Evaluation_Master');
+        if (evalSheet) {
+          const evalLastRow = evalSheet.getLastRow();
+          evalSheet.getRange(evalLastRow, 36).setValue(strategyReportUrl);  // AJ列 = 36
+          Logger.log('✅ 戦略レポートURL記録: AJ列（行' + evalLastRow + '）');
+        }
+      }
+
+      Logger.log('✅ レポート生成完了');
+
+    } catch (reportError) {
+      Logger.log('⚠️ レポート生成エラー: ' + reportError.message);
+      Logger.log('スタック: ' + reportError.stack);
+      results.report_generation_error = reportError.message;
+      // レポート生成エラーでも処理は継続
+    }
+
+    Logger.log('=== レポート生成処理完了 ===');
 
     // 6. Dify_Workflow_Log追加
     if (data.workflow_log) {
