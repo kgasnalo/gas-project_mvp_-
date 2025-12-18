@@ -37,11 +37,16 @@ function getOrCreateRootFolder(companyName = "アマネク") {
   // 新規作成
   const newFolder = DriveApp.createFolder(folderName);
 
-  // ドメイン内全員に閲覧権限
-  newFolder.setSharing(
-    DriveApp.Access.DOMAIN_WITH_LINK,
-    DriveApp.Permission.VIEW
-  );
+  // ドメイン内全員に閲覧権限（エラー時はスキップ）
+  try {
+    newFolder.setSharing(
+      DriveApp.Access.DOMAIN_WITH_LINK,
+      DriveApp.Permission.VIEW
+    );
+    Logger.log('✅ 共有権限設定完了');
+  } catch (error) {
+    Logger.log('⚠️ 共有権限設定をスキップ（手動で設定してください）: ' + error.message);
+  }
 
   Logger.log('✅ ルートフォルダ作成: ' + newFolder.getName());
   return newFolder;
@@ -63,11 +68,15 @@ function getOrCreateFolder(parentFolder, folderName) {
 
   const newFolder = parentFolder.createFolder(folderName);
 
-  // ドメイン内全員に閲覧権限
-  newFolder.setSharing(
-    DriveApp.Access.DOMAIN_WITH_LINK,
-    DriveApp.Permission.VIEW
-  );
+  // ドメイン内全員に閲覧権限（エラー時はスキップ）
+  try {
+    newFolder.setSharing(
+      DriveApp.Access.DOMAIN_WITH_LINK,
+      DriveApp.Permission.VIEW
+    );
+  } catch (error) {
+    // 権限設定エラーは無視（手動で設定可能）
+  }
 
   return newFolder;
 }
@@ -230,11 +239,15 @@ function copyFolderRecursive(sourceFolder, destinationParent) {
   // 新しいフォルダ作成
   const newFolder = destinationParent.createFolder(sourceFolder.getName());
 
-  // 権限設定
-  newFolder.setSharing(
-    DriveApp.Access.DOMAIN_WITH_LINK,
-    DriveApp.Permission.VIEW
-  );
+  // 権限設定（エラー時はスキップ）
+  try {
+    newFolder.setSharing(
+      DriveApp.Access.DOMAIN_WITH_LINK,
+      DriveApp.Permission.VIEW
+    );
+  } catch (error) {
+    // 権限設定エラーは無視（手動で設定可能）
+  }
 
   // ファイルをコピー
   const files = sourceFolder.getFiles();
