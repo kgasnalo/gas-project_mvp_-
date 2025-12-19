@@ -912,10 +912,13 @@ function doPost(e) {
       Logger.log('✅ Evaluation_Master: ' + results.evaluation_master);
     }
 
-    // 5.5. レポート生成処理（Phase A追加）
-    Logger.log('=== レポート生成開始 ===');
+    // === レポート生成処理（V2版） ===
+    Logger.log('=== レポート生成V2開始 ===');
 
     try {
+      // 企業名取得（スクリプトプロパティまたはデフォルト）
+      const companyName = PropertiesService.getScriptProperties().getProperty('COMPANY_NAME') || 'アマネク';
+
       // 候補者マスターデータの取得
       const candidateMasterData = typeof data.candidates_master === 'string'
         ? JSON.parse(data.candidates_master)
@@ -929,97 +932,226 @@ function doPost(e) {
       // 評価マスターデータの取得（既にパース済み）
       const evalData = evaluationMasterData || {};
 
-      // 1. 評価レポート生成
-      if (candidateMasterData && evalData) {
-        const evalReportData = {
-          candidate_name: candidateMasterData['氏名'] || evalData.candidate_name,
-          selection_phase: candidateMasterData['現在ステータス'] || evalData.selection_phase,
-          interview_date: evalData.interview_datetime || '',
-          interviewer: data.validated_input ? data.validated_input.interviewer : '',
+      // 採用区分と選考フェーズの取得
+      const recruitType = candidateMasterData['採用区分'] || '新卒';
+      const selectionPhase = candidateMasterData['現在ステータス'] || (data.validated_input ? data.validated_input.selection_phase : '1次面接');
+
+      // スプレッドシートURL取得
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const spreadsheetUrl = ss.getUrl();
+
+      // 1. 評価レポート生成（V2）
+      if (candidateMasterData && evalData && data.validated_input) {
+        Logger.log('--- 評価レポートV2 生成 ---');
+
+        const evalReportDataV2 = {
+          // 基本情報
+          candidate_id: data.validated_input.candidate_id,
+          candidate_name: candidateMasterData['氏名'],
+          selection_phase: selectionPhase,
+          interview_date: evalData.interview_datetime || Utilities.formatDate(new Date(), 'JST', 'yyyy/MM/dd'),
+          interviewer: data.validated_input.interviewer,
+
+          // 総合評価
           total_rank: evalData.total_rank,
-          total_score: evalData.total_score,
-          summary: evalData.summary,
+          recommendation: getRecommendation(evalData.total_rank),
+          summary_reasons: [
+            evalData.philosophy_reason ? '理念への共感が見られる' : null,
+            evalData.strategy_reason ? '戦略的思考力がある' : null,
+            evalData.motivation_reason ? '高い志望度が見られる' : null
+          ].filter(r => r),
+
+          // 4軸評価
           philosophy_rank: evalData.philosophy_rank,
           philosophy_score: evalData.philosophy_score,
+          philosophy_summary: getSummary(evalData.philosophy_rank, 'Philosophy'),
           philosophy_reason: evalData.philosophy_reason,
+          philosophy_evidence: evalData.philosophy_evidence || '',
+
           strategy_rank: evalData.strategy_rank,
           strategy_score: evalData.strategy_score,
+          strategy_summary: getSummary(evalData.strategy_rank, 'Strategy'),
           strategy_reason: evalData.strategy_reason,
+          strategy_evidence: evalData.strategy_evidence || '',
+
           motivation_rank: evalData.motivation_rank,
           motivation_score: evalData.motivation_score,
+          motivation_summary: getSummary(evalData.motivation_rank, 'Motivation'),
           motivation_reason: evalData.motivation_reason,
+          motivation_evidence: evalData.motivation_evidence || '',
+
           execution_rank: evalData.execution_rank,
           execution_score: evalData.execution_score,
+          execution_summary: getSummary(evalData.execution_rank, 'Execution'),
           execution_reason: evalData.execution_reason,
+          execution_evidence: evalData.execution_evidence || '',
+
+          // 懸念事項
+          critical_concerns: [],
+
+          // 次回質問
           next_questions: [
             evalData.next_question_1,
             evalData.next_question_2,
             evalData.next_question_3,
             evalData.next_question_4,
             evalData.next_question_5
-          ].filter(q => q),  // 空を除外
-          concerns: evalData.concerns,
-          next_check_points: evalData.next_check_points
+          ].filter(q => q),
+
+          // 面接官コメント
+          interviewer_comment: evalData.summary || '',
+
+          // 議事録
+          transcript: evalData.transcript || '（文字起こしデータなし）',
+
+          // スプレッドシートリンク
+          spreadsheet_url: spreadsheetUrl
         };
 
-        const evalReportUrl = generateEvaluationReport(evalReportData);
-        Logger.log('✅ 評価レポート生成: ' + evalReportUrl);
-        results.evaluation_report_url = evalReportUrl;
+        const evalResultV2 = generateEvaluationReportV2(evalReportDataV2, recruitType, selectionPhase, companyName);
 
-        // Evaluation_MasterにURL記録
-        const evalSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Evaluation_Master');
-        if (evalSheet) {
-          const evalLastRow = evalSheet.getLastRow();
-          evalSheet.getRange(evalLastRow, 35).setValue(evalReportUrl);  // AI列 = 35
-          Logger.log('✅ 評価レポートURL記録: AI列（行' + evalLastRow + '）');
+        if (evalResultV2.success) {
+          Logger.log('✅ 評価レポートV2生成成功: ' + evalResultV2.url);
+          results.evaluation_report_url = evalResultV2.url;
+
+          // Evaluation_MasterにURL記録
+          const evalSheet = ss.getSheetByName('Evaluation_Master');
+          if (evalSheet) {
+            const evalLastRow = evalSheet.getLastRow();
+            evalSheet.getRange(evalLastRow, 32).setValue(evalResultV2.url);  // AF列 = 32
+            Logger.log('✅ 評価レポートURL記録: AF列（行' + evalLastRow + '）');
+          }
         }
       }
 
-      // 2. 戦略レポート生成
-      if (candidateMasterData && acceptanceData) {
-        const strategyReportData = {
-          candidate_name: candidateMasterData['氏名'] || acceptanceData.candidate_name,
-          current_phase: candidateMasterData['現在ステータス'] || '',
-          acceptance_probability: acceptanceData.acceptance_rate_ai || acceptanceData.acceptance_probability,
-          confidence_level: acceptanceData.confidence_level,
-          positive_factors: acceptanceData.key_positive_factors || [],
-          risk_factors: acceptanceData.key_risk_factors || [],
+      // 2. 戦略レポート生成（V2）
+      if (candidateMasterData && acceptanceData && data.validated_input) {
+        Logger.log('--- 戦略レポートV2 生成 ---');
+
+        const strategyReportDataV2 = {
+          // 基本情報
+          candidate_id: data.validated_input.candidate_id,
+          candidate_name: candidateMasterData['氏名'],
+          current_phase: selectionPhase,
+          interviewer: data.validated_input.interviewer,
+
+          // 承諾可能性
+          acceptance_probability: acceptanceData.acceptance_rate_ai || 0,
+          confidence_level: acceptanceData.confidence_level || 'MEDIUM',
+
+          // 競合状況
+          competitor_probabilities: [],
+
+          // 24時間アクション
+          immediate_action_24h: acceptanceData.next_action || '（アクションなし）',
+          action_reason: '（理由不明）',
+          expected_effect: '（効果不明）',
+
+          // リスク要因
+          risk_factors: (acceptanceData.key_risk_factors || []).map(factor => ({
+            factor: factor,
+            countermeasure: '（対策要検討）'
+          })),
+
+          // 自社の強み
+          our_strengths: acceptanceData.key_positive_factors || [],
+
+          // 承諾ストーリー
           acceptance_story: acceptanceData.engagement_strategy ? [
-            acceptanceData.engagement_strategy.immediate_action_24h,
-            acceptanceData.engagement_strategy.followup_action_48h,
-            acceptanceData.engagement_strategy.longterm_action_72h
-          ].filter(s => s) : [],
-          engagement_strategy: acceptanceData.engagement_strategy || {},
-          competitor_analysis: acceptanceData.competitor_analysis ?
-            (typeof acceptanceData.competitor_analysis === 'string' ?
-              acceptanceData.competitor_analysis :
-              JSON.stringify(acceptanceData.competitor_analysis)) : '',
-          recommendation: acceptanceData.recommendation || ''
+            `Step 1: ${acceptanceData.engagement_strategy.immediate_action_24h || '即時アクション'}`,
+            `Step 2: ${acceptanceData.engagement_strategy.followup_action_48h || 'フォローアップ'}`,
+            `Step 3: ${acceptanceData.engagement_strategy.longterm_action_72h || '長期施策'}`
+          ].filter(s => s && !s.includes('undefined')) : [],
+
+          // ポジティブ要因（詳細）
+          positive_factors: (acceptanceData.key_positive_factors || []).map(factor => ({
+            factor: factor,
+            evidence: ''
+          })),
+
+          // リスク要因（詳細）
+          risk_factors_detailed: (acceptanceData.key_risk_factors || []).map(factor => ({
+            factor: factor,
+            severity: 'MEDIUM',
+            detailed_countermeasure: '（詳細対策要検討）'
+          })),
+
+          // 競合分析
+          competitor_analysis: [],
+
+          // 推奨施策
+          engagement_recommendations: acceptanceData.engagement_strategy ? [
+            `24時間以内: ${acceptanceData.engagement_strategy.immediate_action_24h || '要確認'}`,
+            `48時間以内: ${acceptanceData.engagement_strategy.followup_action_48h || '要確認'}`,
+            `72時間以内: ${acceptanceData.engagement_strategy.longterm_action_72h || '要確認'}`
+          ].filter(s => s && !s.includes('undefined')) : [],
+
+          // スプレッドシートリンク
+          spreadsheet_url: spreadsheetUrl
         };
 
-        const strategyReportUrl = generateStrategyReport(strategyReportData);
-        Logger.log('✅ 戦略レポート生成: ' + strategyReportUrl);
-        results.strategy_report_url = strategyReportUrl;
+        const strategyResultV2 = generateStrategyReportV2(strategyReportDataV2, recruitType, selectionPhase, companyName);
 
-        // Evaluation_MasterにURL記録
-        const evalSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Evaluation_Master');
-        if (evalSheet) {
-          const evalLastRow = evalSheet.getLastRow();
-          evalSheet.getRange(evalLastRow, 36).setValue(strategyReportUrl);  // AJ列 = 36
-          Logger.log('✅ 戦略レポートURL記録: AJ列（行' + evalLastRow + '）');
+        if (strategyResultV2.success) {
+          Logger.log('✅ 戦略レポートV2生成成功: ' + strategyResultV2.url);
+          results.strategy_report_url = strategyResultV2.url;
+
+          // Evaluation_MasterにURL記録
+          const evalSheet = ss.getSheetByName('Evaluation_Master');
+          if (evalSheet) {
+            const evalLastRow = evalSheet.getLastRow();
+            evalSheet.getRange(evalLastRow, 33).setValue(strategyResultV2.url);  // AG列 = 33
+            Logger.log('✅ 戦略レポートURL記録: AG列（行' + evalLastRow + '）');
+          }
         }
       }
 
-      Logger.log('✅ レポート生成完了');
+      // 3. 評価B以上の場合、フォルダコピー
+      if (evalData && evalData.total_rank && ['A', 'B'].includes(evalData.total_rank)) {
+        Logger.log('--- 評価B以上: フォルダコピー実行 ---');
+        const copyResult = copyFolderToGradeB(
+          data.validated_input.candidate_id,
+          candidateMasterData['氏名'],
+          recruitType,
+          companyName
+        );
+
+        if (copyResult.success) {
+          Logger.log('✅ 評価B以上フォルダコピー成功');
+        } else {
+          Logger.log('⚠️ 評価B以上フォルダコピー失敗: ' + (copyResult.error || 'Unknown error'));
+        }
+      }
+
+      // 4. 内定・承諾の場合、フォルダ移動
+      if (candidateMasterData && candidateMasterData['現在ステータス'] &&
+          ['内定', '承諾'].includes(candidateMasterData['現在ステータス'])) {
+        Logger.log('--- 内定・承諾: フォルダ移動実行 ---');
+        const moveResult = moveFolderToAccepted(
+          data.validated_input.candidate_id,
+          candidateMasterData['氏名'],
+          recruitType,
+          selectionPhase,
+          companyName
+        );
+
+        if (moveResult.success) {
+          Logger.log('✅ 内定・承諾フォルダ移動成功');
+        } else {
+          Logger.log('⚠️ 内定・承諾フォルダ移動失敗: ' + (moveResult.error || 'Unknown error'));
+        }
+      }
+
+      Logger.log('✅ レポート生成V2完了');
 
     } catch (reportError) {
-      Logger.log('⚠️ レポート生成エラー: ' + reportError.message);
-      Logger.log('スタック: ' + reportError.stack);
+      Logger.log('❌ レポート生成V2エラー: ' + reportError.message);
+      Logger.log('スタックトレース: ' + reportError.stack);
       results.report_generation_error = reportError.message;
       // レポート生成エラーでも処理は継続
     }
 
-    Logger.log('=== レポート生成処理完了 ===');
+    Logger.log('=== レポート生成V2完了 ===');
 
     // 6. Dify_Workflow_Log追加
     if (data.workflow_log) {
@@ -1080,6 +1212,57 @@ function doPost(e) {
       }, null, 2))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+/**
+ * ランクから推奨を取得（ヘルパー関数）
+ */
+function getRecommendation(rank) {
+  const recommendations = {
+    'A': '積極採用推奨',
+    'B': '採用推奨',
+    'C': '条件付き採用検討',
+    'D': '慎重検討',
+    'E': '見送り推奨'
+  };
+  return recommendations[rank] || '要検討';
+}
+
+/**
+ * ランクからサマリーを取得（ヘルパー関数）
+ */
+function getSummary(rank, axis) {
+  const summaries = {
+    'Philosophy': {
+      'A': '理念への深い共感が見られる',
+      'B': '理念への一定の共感が見られる',
+      'C': '理念理解は標準的',
+      'D': '理念への共感がやや弱い',
+      'E': '理念とのミスマッチが懸念される'
+    },
+    'Strategy': {
+      'A': '優れた戦略的思考力',
+      'B': '戦略理解は十分、実践経験で向上可',
+      'C': '戦略理解は標準的',
+      'D': '戦略的思考力の強化が必要',
+      'E': '戦略的思考力に大きな課題'
+    },
+    'Motivation': {
+      'A': '非常に高い志望度、成長意欲強',
+      'B': '高い志望度が見られる',
+      'C': '志望度は標準的',
+      'D': '志望度がやや低い',
+      'E': '志望度が低い、動機に懸念'
+    },
+    'Execution': {
+      'A': '優れた実行力、実績あり',
+      'B': '実行力は十分、実績あり',
+      'C': '実行力は標準的',
+      'D': '実行力の強化が必要',
+      'E': '実行力に大きな課題'
+    }
+  };
+  return summaries[axis]?.[rank] || '評価保留';
 }
 
 /**
