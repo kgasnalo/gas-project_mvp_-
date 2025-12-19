@@ -1018,8 +1018,8 @@ function doPost(e) {
           const evalSheet = ss.getSheetByName('Evaluation_Master');
           if (evalSheet) {
             const evalLastRow = evalSheet.getLastRow();
-            evalSheet.getRange(evalLastRow, 35).setValue(evalResultV2.url);  // AI列 = 35
-            Logger.log('✅ 評価レポートURL記録: AI列（行' + evalLastRow + '）');
+            evalSheet.getRange(evalLastRow, 32).setValue(evalResultV2.url);  // AF列 = 32
+            Logger.log('✅ 評価レポートURL記録: AF列（行' + evalLastRow + '）');
           }
         }
       }
@@ -1100,8 +1100,8 @@ function doPost(e) {
           const evalSheet = ss.getSheetByName('Evaluation_Master');
           if (evalSheet) {
             const evalLastRow = evalSheet.getLastRow();
-            evalSheet.getRange(evalLastRow, 36).setValue(strategyResultV2.url);  // AJ列 = 36
-            Logger.log('✅ 戦略レポートURL記録: AJ列（行' + evalLastRow + '）');
+            evalSheet.getRange(evalLastRow, 33).setValue(strategyResultV2.url);  // AG列 = 33
+            Logger.log('✅ 戦略レポートURL記録: AG列（行' + evalLastRow + '）');
           }
         }
       }
@@ -1233,46 +1233,36 @@ function getRecommendation(rank) {
  */
 function getSummary(rank, axis) {
   const summaries = {
-    'technical_ability': {
-      'A': '優れた技術力と専門知識を有し、即戦力として活躍が期待できる',
-      'B': '十分な技術力を持ち、チームに貢献できる',
-      'C': '基礎的な技術力はあるが、更なる成長が必要',
-      'D': '技術力に課題があり、育成に時間を要する',
-      'E': '技術力が不足しており、即時の採用は困難'
+    'Philosophy': {
+      'A': '理念への深い共感が見られる',
+      'B': '理念への一定の共感が見られる',
+      'C': '理念理解は標準的',
+      'D': '理念への共感がやや弱い',
+      'E': '理念とのミスマッチが懸念される'
     },
-    'communication': {
-      'A': 'コミュニケーション能力が優れており、チーム連携が円滑に行える',
-      'B': '良好なコミュニケーション能力を持ち、協働が可能',
-      'C': '基本的なコミュニケーションは可能だが、改善の余地あり',
-      'D': 'コミュニケーションに課題があり、指導が必要',
-      'E': 'コミュニケーション能力が不足しており、協働が困難'
+    'Strategy': {
+      'A': '優れた戦略的思考力',
+      'B': '戦略理解は十分、実践経験で向上可',
+      'C': '戦略理解は標準的',
+      'D': '戦略的思考力の強化が必要',
+      'E': '戦略的思考力に大きな課題'
     },
-    'logical_thinking': {
-      'A': '論理的思考力が優れており、複雑な課題解決が可能',
-      'B': '十分な論理的思考力を持ち、業務遂行が可能',
-      'C': '基本的な論理的思考は可能だが、複雑な課題には苦戦する可能性',
-      'D': '論理的思考に課題があり、サポートが必要',
-      'E': '論理的思考力が不足しており、業務遂行が困難'
+    'Motivation': {
+      'A': '非常に高い志望度、成長意欲強',
+      'B': '高い志望度が見られる',
+      'C': '志望度は標準的',
+      'D': '志望度がやや低い',
+      'E': '志望度が低い、動機に懸念'
     },
-    'cultural_fit': {
-      'A': '企業文化への適合度が非常に高く、組織に良い影響を与える',
-      'B': '企業文化に適合しており、スムーズに馴染める',
-      'C': '企業文化への適合に時間を要する可能性がある',
-      'D': '企業文化とのギャップがあり、適応に課題がある',
-      'E': '企業文化との適合が困難であり、組織への悪影響が懸念される'
-    },
-    'growth_potential': {
-      'A': '成長意欲が高く、将来のリーダー候補として期待できる',
-      'B': '成長意欲があり、継続的な成長が見込める',
-      'C': '成長意欲は見られるが、具体的な行動が不足',
-      'D': '成長意欲が低く、自己研鑽が不足している',
-      'E': '成長意欲が見られず、長期的な成長が期待できない'
+    'Execution': {
+      'A': '優れた実行力、実績あり',
+      'B': '実行力は十分、実績あり',
+      'C': '実行力は標準的',
+      'D': '実行力の強化が必要',
+      'E': '実行力に大きな課題'
     }
   };
-
-  return summaries[axis] && summaries[axis][rank]
-    ? summaries[axis][rank]
-    : '評価が必要です';
+  return summaries[axis]?.[rank] || '評価保留';
 }
 
 /**
