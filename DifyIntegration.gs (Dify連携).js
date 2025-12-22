@@ -1471,10 +1471,22 @@ function testFullWorkflow() {
       candidate_id: testCandidateId,
       candidate_name: 'テスト統合_太郎',
       contact_type: '1次面接',
+      acceptance_rate_rule: '70%',
       acceptance_rate_ai: 65,
+      acceptance_rate_final: '65%',
       confidence_level: 'HIGH',
       motivation_score: 18,
-      core_motivation: '社会貢献への強い意欲'
+      competitive_advantage_score: 75,
+      concern_resolution_score: 80,
+      core_motivation: '社会貢献への強い意欲',
+      top_concern: '給与条件',
+      concern_category: '待遇',
+      competitors: 'リブコンサルティング、ベイカレント',
+      competitive_advantage: '実行支援の実績、成長機会',
+      next_action: '給与条件の詳細説明',
+      action_deadline: '2025-12-23',
+      action_priority: '高',
+      doc_url: ''
     },
     evaluation_master: {
       candidate_id: testCandidateId,
@@ -1612,8 +1624,22 @@ function testIndividualFunctions() {
       candidate_id: testCandidateId,
       candidate_name: 'テスト個別_太郎',
       contact_type: 'テスト面接',
+      acceptance_rate_rule: '70%',
       acceptance_rate_ai: 75,
-      confidence_level: 'HIGH'
+      acceptance_rate_final: '75%',
+      confidence_level: 'HIGH',
+      motivation_score: 20,
+      competitive_advantage_score: 80,
+      concern_resolution_score: 85,
+      core_motivation: 'テスト動機',
+      top_concern: 'テスト懸念',
+      concern_category: 'テスト',
+      competitors: 'テスト競合',
+      competitive_advantage: 'テスト優位性',
+      next_action: 'テストアクション',
+      action_deadline: '2025-12-25',
+      action_priority: '中',
+      doc_url: 'https://example.com/test'
     });
     Logger.log(`  ✅ SUCCESS - ログID: ${engageId}\n`);
     passCount++;
