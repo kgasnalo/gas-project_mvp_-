@@ -19,10 +19,10 @@
 /**
  * ルートフォルダを取得または作成
  *
- * @param {string} companyName - 企業名（デフォルト: "アマネク"）
+ * @param {string} companyName - 企業名（デフォルト: "テスト株式会社"）
  * @return {GoogleAppsScript.Drive.Folder} ルートフォルダ
  */
-function getOrCreateRootFolder(companyName = "アマネク") {
+function getOrCreateRootFolder(companyName = "テスト株式会社") {
   const folderName = `${companyName}_採用ドライブ`;
 
   // 既存フォルダを検索
@@ -87,7 +87,7 @@ function getOrCreateFolder(parentFolder, folderName) {
  * @param {string} companyName - 企業名
  * @return {Object} 作成されたフォルダ情報
  */
-function initializeDriveStructure(companyName = "アマネク") {
+function initializeDriveStructure(companyName = "テスト株式会社") {
   Logger.log('=== ドライブ構造初期化開始 ===');
 
   // ルートフォルダ作成
@@ -143,10 +143,10 @@ function initializeDriveStructure(companyName = "アマネク") {
  *
  * @param {string} recruitType - 採用区分（新卒/中途）
  * @param {string} phase - 選考フェーズ（初回面談/1次面接等）
- * @param {string} companyName - 企業名（デフォルト: "アマネク"）
+ * @param {string} companyName - 企業名（デフォルト: "テスト株式会社"）
  * @return {GoogleAppsScript.Drive.Folder} フェーズフォルダ
  */
-function getOrCreatePhaseFolder(recruitType, phase, companyName = "アマネク") {
+function getOrCreatePhaseFolder(recruitType, phase, companyName = "テスト株式会社") {
   const rootFolder = getOrCreateRootFolder(companyName);
   const typeFolder = getOrCreateFolder(rootFolder, recruitType);
 
@@ -172,10 +172,10 @@ function getOrCreatePhaseFolder(recruitType, phase, companyName = "アマネク"
  * @param {string} phase - 選考フェーズ
  * @param {string} candidateId - 候補者ID（CAND_YYYYMMDD_HHMMSS）
  * @param {string} candidateName - 候補者名
- * @param {string} companyName - 企業名（デフォルト: "アマネク"）
+ * @param {string} companyName - 企業名（デフォルト: "テスト株式会社"）
  * @return {GoogleAppsScript.Drive.Folder} 候補者フォルダ
  */
-function getOrCreateCandidateFolder(recruitType, phase, candidateId, candidateName, companyName = "アマネク") {
+function getOrCreateCandidateFolder(recruitType, phase, candidateId, candidateName, companyName = "テスト株式会社") {
   const phaseFolder = getOrCreatePhaseFolder(recruitType, phase, companyName);
 
   // フォルダ名: CAND_20251218_山田太郎
@@ -191,10 +191,10 @@ function getOrCreateCandidateFolder(recruitType, phase, candidateId, candidateNa
  * candidate_idで全候補者フォルダを検索
  *
  * @param {string} candidateId - 候補者ID
- * @param {string} companyName - 企業名（デフォルト: "アマネク"）
+ * @param {string} companyName - 企業名（デフォルト: "テスト株式会社"）
  * @return {Array<Object>} フォルダ情報の配列
  */
-function findCandidateFolders(candidateId, companyName = "アマネク") {
+function findCandidateFolders(candidateId, companyName = "テスト株式会社") {
   Logger.log(`=== 候補者フォルダ検索: ${candidateId} ===`);
 
   const rootFolder = getOrCreateRootFolder(companyName);
@@ -275,10 +275,10 @@ function copyFolderRecursive(sourceFolder, destinationParent) {
  * @param {string} candidateId - 候補者ID
  * @param {string} candidateName - 候補者名
  * @param {string} recruitType - 採用区分
- * @param {string} companyName - 企業名（デフォルト: "アマネク"）
+ * @param {string} companyName - 企業名（デフォルト: "テスト株式会社"）
  * @return {Object} コピー結果
  */
-function copyFolderToGradeB(candidateId, candidateName, recruitType, companyName = "アマネク") {
+function copyFolderToGradeB(candidateId, candidateName, recruitType, companyName = "テスト株式会社") {
   Logger.log('=== 評価B以上フォルダへコピー開始 ===');
 
   try {
@@ -337,10 +337,10 @@ function copyFolderToGradeB(candidateId, candidateName, recruitType, companyName
  * @param {string} candidateName - 候補者名
  * @param {string} recruitType - 採用区分
  * @param {string} currentPhase - 現在の選考フェーズ
- * @param {string} companyName - 企業名（デフォルト: "アマネク"）
+ * @param {string} companyName - 企業名（デフォルト: "テスト株式会社"）
  * @return {Object} 移動結果
  */
-function moveFolderToAccepted(candidateId, candidateName, recruitType, currentPhase, companyName = "アマネク") {
+function moveFolderToAccepted(candidateId, candidateName, recruitType, currentPhase, companyName = "テスト株式会社") {
   Logger.log('=== 内定・承諾フォルダへ移動開始 ===');
 
   try {
