@@ -1018,8 +1018,8 @@ function doPost(e) {
           const evalSheet = ss.getSheetByName('Evaluation_Master');
           if (evalSheet) {
             const evalLastRow = evalSheet.getLastRow();
-            evalSheet.getRange(evalLastRow, 32).setValue(evalResultV2.url);  // AF列 = 32
-            Logger.log('✅ 評価レポートURL記録: AF列（行' + evalLastRow + '）');
+            evalSheet.getRange(evalLastRow, 35).setValue(evalResultV2.url);  // AI列 = 35
+            Logger.log('✅ 評価レポートURL記録: AI列（行' + evalLastRow + '）');
           }
         }
       }
@@ -1100,8 +1100,8 @@ function doPost(e) {
           const evalSheet = ss.getSheetByName('Evaluation_Master');
           if (evalSheet) {
             const evalLastRow = evalSheet.getLastRow();
-            evalSheet.getRange(evalLastRow, 33).setValue(strategyResultV2.url);  // AG列 = 33
-            Logger.log('✅ 戦略レポートURL記録: AG列（行' + evalLastRow + '）');
+            evalSheet.getRange(evalLastRow, 36).setValue(strategyResultV2.url);  // AJ列 = 36
+            Logger.log('✅ 戦略レポートURL記録: AJ列（行' + evalLastRow + '）');
           }
         }
       }
@@ -2128,79 +2128,85 @@ function testReportGenerationWithURLRecording() {
     Logger.log('  URL: ' + strategyResult.url);
     Logger.log('  Document ID: ' + strategyResult.documentId);
 
-    // Step 4: Evaluation_Masterに新しい行を追加
-    Logger.log('\n=== Step 4: Evaluation_Masterに新規データ追加 ===');
+    // Step 4: Evaluation_Masterに基本データを書き込み（writeToEvaluationMaster使用）
+    Logger.log('\n=== Step 4: Evaluation_Masterにデータ書き込み ===');
 
-    const newRow = [
-      testCandidateId,                    // A列: 候補者ID
-      'URL検証_太郎',                      // B列: 氏名
-      '新卒',                             // C列: 採用区分
-      '1次面接',                          // D列: 選考フェーズ
-      new Date(),                         // E列: 面接日
-      'テスト面接官',                      // F列: 面接官
-      28, 24, 19, 19,                     // G-J列: 各軸スコア
-      90,                                 // K列: 合計スコア
-      'A',                                // L列: 総合ランク
-      '積極採用推奨',                      // M列: 推奨
-      '理念への深い共感',                  // N列: サマリー理由1
-      '',                                 // O列: サマリー理由2
-      '',                                 // P列: サマリー理由3
-      'A', '理念への深い共感が見られる',    // Q-R列: Philosophy
-      '企業理念に深く共感',                // S列: Philosophy理由
-      '理念に共感した発言',                // T列: Philosophy証拠
-      'B', '戦略理解は十分、実践経験で向上可', // U-V列: Strategy
-      '戦略的思考の基礎はある',            // W列: Strategy理由
-      '戦略的な発言',                      // X列: Strategy証拠
-      'A', '非常に高い志望度、成長意欲強',  // Y-Z列: Motivation
-      '高い志望度と成長意欲',              // AA列: Motivation理由
-      '強い志望動機',                      // AB列: Motivation証拠
-      'A', '優れた実行力、実績あり',        // AC-AD列: Execution
-      '過去の実績から実行力確認',          // AE列: Execution理由
-      '実績について語った',                // AF列: Execution証拠 ← ここまでで31列
-      '',                                 // AG列: 評価レポートURL（32列目）← ★ここに記録
-      ''                                  // AH列: 戦略レポートURL（33列目）← ★ここに記録
-    ];
+    const evalMasterData = {
+      candidate_id: testCandidateId,
+      candidate_name: 'URL検証_太郎',
+      recruit_type: '新卒',
+      selection_phase: '1次面接',
+      interview_date: new Date(),
+      interviewer: 'テスト面接官',
+      philosophy_score: 28,
+      philosophy_rank: 'A',
+      philosophy_summary: '理念への深い共感が見られる',
+      philosophy_reason: '企業理念に深く共感',
+      philosophy_evidence: '理念に共感した発言',
+      strategy_score: 24,
+      strategy_rank: 'B',
+      strategy_summary: '戦略理解は十分、実践経験で向上可',
+      strategy_reason: '戦略的思考の基礎はある',
+      strategy_evidence: '戦略的な発言',
+      motivation_score: 19,
+      motivation_rank: 'A',
+      motivation_summary: '非常に高い志望度、成長意欲強',
+      motivation_reason: '高い志望度と成長意欲',
+      motivation_evidence: '強い志望動機',
+      execution_score: 19,
+      execution_rank: 'A',
+      execution_summary: '優れた実行力、実績あり',
+      execution_reason: '過去の実績から実行力確認',
+      execution_evidence: '実績について語った',
+      total_score: 90,
+      total_rank: 'A',
+      recommendation: '積極採用推奨',
+      summary_reasons: ['理念への深い共感'],
+      critical_concerns: [],
+      next_questions: ['質問1', '質問2']
+    };
 
-    evalSheet.appendRow(newRow);
+    const evalId = writeToEvaluationMaster(evalMasterData);
+    Logger.log('✅ Evaluation_Master書き込み完了: ' + evalId);
+
+    // 最新行を取得
     const lastRow = evalSheet.getLastRow();
-    Logger.log('✅ Evaluation_Masterに新規行追加: 行' + lastRow);
+    Logger.log('  最新行番号: ' + lastRow);
 
     // Step 5: URL記録（修正箇所の検証）
-    Logger.log('\n=== Step 5: URL記録列への書き込み（修正箇所検証） ===');
-    Logger.log('🔍 修正前: AI列（35）/AJ列（36）');
-    Logger.log('✅ 修正後: AF列（32）/AG列（33）');
+    Logger.log('\n=== Step 5: URL記録列への書き込み（検証） ===');
+    Logger.log('✅ 正しい列: AI列（35）/AJ列（36）');
 
-    // AF列（32列目）に評価レポートURL記録
-    evalSheet.getRange(lastRow, 32).setValue(evalResult.url);
-    Logger.log('✅ 評価レポートURL記録: AF列（32列目）行' + lastRow);
+    // AI列（35列目）に評価レポートURL記録
+    evalSheet.getRange(lastRow, 35).setValue(evalResult.url);
+    Logger.log('✅ 評価レポートURL記録: AI列（35列目）行' + lastRow);
     Logger.log('  URL: ' + evalResult.url);
 
-    // AG列（33列目）に戦略レポートURL記録
-    evalSheet.getRange(lastRow, 33).setValue(strategyResult.url);
-    Logger.log('✅ 戦略レポートURL記録: AG列（33列目）行' + lastRow);
+    // AJ列（36列目）に戦略レポートURL記録
+    evalSheet.getRange(lastRow, 36).setValue(strategyResult.url);
+    Logger.log('✅ 戦略レポートURL記録: AJ列（36列目）行' + lastRow);
     Logger.log('  URL: ' + strategyResult.url);
 
     // Step 6: 記録内容の確認
     Logger.log('\n=== Step 6: 記録内容の確認 ===');
 
-    const recordedEvalUrl = evalSheet.getRange(lastRow, 32).getValue();
-    const recordedStrategyUrl = evalSheet.getRange(lastRow, 33).getValue();
+    const recordedEvalUrl = evalSheet.getRange(lastRow, 35).getValue();
+    const recordedStrategyUrl = evalSheet.getRange(lastRow, 36).getValue();
 
     Logger.log('📊 記録確認:');
     Logger.log('  行番号: ' + lastRow);
-    Logger.log('  AF列（32）の値: ' + (recordedEvalUrl ? '✅ 記録あり' : '❌ 空欄'));
-    Logger.log('  AG列（33）の値: ' + (recordedStrategyUrl ? '✅ 記録あり' : '❌ 空欄'));
+    Logger.log('  AI列（35）の値: ' + (recordedEvalUrl ? '✅ 記録あり' : '❌ 空欄'));
+    Logger.log('  AJ列（36）の値: ' + (recordedStrategyUrl ? '✅ 記録あり' : '❌ 空欄'));
 
     // 列名の確認
-    const headers = evalSheet.getRange(1, 1, 1, 35).getValues()[0];
+    const headers = evalSheet.getRange(1, 1, 1, 36).getValues()[0];
     Logger.log('\n📋 列ヘッダー確認:');
-    Logger.log('  32列目（AF列）のヘッダー: ' + (headers[31] || '未定義'));
-    Logger.log('  33列目（AG列）のヘッダー: ' + (headers[32] || '未定義'));
+    Logger.log('  35列目（AI列）のヘッダー: ' + (headers[34] || '未定義'));
+    Logger.log('  36列目（AJ列）のヘッダー: ' + (headers[35] || '未定義'));
 
     // Step 7: getSummary()関数の検証
     Logger.log('\n=== Step 7: getSummary()関数の動作確認 ===');
-    Logger.log('🔍 修正前: 5軸（technical_ability等）');
-    Logger.log('✅ 修正後: 4軸（Philosophy, Strategy, Motivation, Execution）');
+    Logger.log('✅ 4軸対応: Philosophy, Strategy, Motivation, Execution');
 
     const testAxes = ['Philosophy', 'Strategy', 'Motivation', 'Execution'];
     const testRank = 'A';
@@ -2219,16 +2225,16 @@ function testReportGenerationWithURLRecording() {
     Logger.log('  Evaluation_Master行番号: ' + lastRow);
     Logger.log('  評価レポートURL: ' + evalResult.url);
     Logger.log('  戦略レポートURL: ' + strategyResult.url);
-    Logger.log('  AF列（32）記録: ' + (recordedEvalUrl ? '✅' : '❌'));
-    Logger.log('  AG列（33）記録: ' + (recordedStrategyUrl ? '✅' : '❌'));
+    Logger.log('  AI列（35）記録: ' + (recordedEvalUrl ? '✅' : '❌'));
+    Logger.log('  AJ列（36）記録: ' + (recordedStrategyUrl ? '✅' : '❌'));
     Logger.log('  getSummary()動作: ✅');
     Logger.log('  実行時間: ' + ((new Date() - startTime) / 1000).toFixed(2) + '秒');
 
     Logger.log('\n🎯 次のアクション:');
     Logger.log('  1. Evaluation_Masterシートを開く');
     Logger.log('  2. 行' + lastRow + 'を確認');
-    Logger.log('  3. AF列（32列目）に評価レポートURLがあることを確認');
-    Logger.log('  4. AG列（33列目）に戦略レポートURLがあることを確認');
+    Logger.log('  3. AI列（35列目）に評価レポートURLがあることを確認');
+    Logger.log('  4. AJ列（36列目）に戦略レポートURLがあることを確認');
     Logger.log('  5. URLをクリックしてレポート内容を確認');
 
     return {
@@ -2237,8 +2243,8 @@ function testReportGenerationWithURLRecording() {
       evaluation_master_row: lastRow,
       evaluation_report_url: evalResult.url,
       strategy_report_url: strategyResult.url,
-      af_column_recorded: !!recordedEvalUrl,
-      ag_column_recorded: !!recordedStrategyUrl,
+      ai_column_35_recorded: !!recordedEvalUrl,
+      aj_column_36_recorded: !!recordedStrategyUrl,
       execution_time_seconds: ((new Date() - startTime) / 1000).toFixed(2)
     };
 
