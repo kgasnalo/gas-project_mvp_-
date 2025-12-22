@@ -2014,7 +2014,7 @@ function testReportGenerationWithURLRecording() {
 
   const startTime = new Date();
   const testCandidateId = 'TEST_URL_' + startTime.getTime();
-  const companyName = PropertiesService.getScriptProperties().getProperty('COMPANY_NAME') || 'アマネク';
+  const companyName = 'テスト株式会社';  // テスト用企業名（ドライブ: https://drive.google.com/drive/folders/1jF-8_SrhoIlPnseyrCVMd4BNOK4WSGdG）
 
   try {
     // スプレッドシート取得
