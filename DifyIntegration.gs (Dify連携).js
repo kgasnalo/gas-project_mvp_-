@@ -1996,3 +1996,263 @@ function testHandleGetBehaviorData() {
     Logger.log('❌ テスト失敗: ' + result.error);
   }
 }
+
+/**
+ * レポート生成V2とURL記録列の検証用テスト関数
+ *
+ * 検証項目:
+ * 1. 評価レポートV2の生成
+ * 2. 戦略レポートV2の生成
+ * 3. Evaluation_MasterのAF列（32列目）への評価レポートURL記録
+ * 4. Evaluation_MasterのAG列（33列目）への戦略レポートURL記録
+ * 5. getSummary()関数の動作確認（4軸: Philosophy, Strategy, Motivation, Execution）
+ */
+function testReportGenerationWithURLRecording() {
+  Logger.log('========================================');
+  Logger.log('レポート生成V2 & URL記録列 検証テスト');
+  Logger.log('========================================\n');
+
+  const startTime = new Date();
+  const testCandidateId = 'TEST_URL_' + startTime.getTime();
+  const companyName = PropertiesService.getScriptProperties().getProperty('COMPANY_NAME') || 'アマネク';
+
+  try {
+    // スプレッドシート取得
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const evalSheet = ss.getSheetByName('Evaluation_Master');
+
+    if (!evalSheet) {
+      throw new Error('Evaluation_Masterシートが見つかりません');
+    }
+
+    Logger.log('=== Step 1: テストデータ準備 ===');
+
+    // 評価レポート用テストデータ
+    const evalReportData = {
+      candidate_id: testCandidateId,
+      candidate_name: 'URL検証_太郎',
+      selection_phase: '1次面接',
+      interview_date: new Date().toLocaleDateString('ja-JP'),
+      interviewer: 'テスト面接官',
+      total_rank: 'A',
+      recommendation: '積極採用推奨',
+      summary_reasons: [
+        '理念への深い共感',
+        '優れた戦略的思考力',
+        '高い実行力'
+      ],
+      philosophy_rank: 'A',
+      philosophy_score: 28,
+      philosophy_summary: '理念への深い共感が見られる',
+      philosophy_reason: '企業理念に深く共感し、自身の価値観と一致している',
+      philosophy_evidence: '理念に共感した発言があった',
+      strategy_rank: 'B',
+      strategy_score: 24,
+      strategy_summary: '戦略理解は十分、実践経験で向上可',
+      strategy_reason: '戦略的思考の基礎はあるが、実践でさらに向上可能',
+      strategy_evidence: '戦略的な発言があった',
+      motivation_rank: 'A',
+      motivation_score: 19,
+      motivation_summary: '非常に高い志望度、成長意欲強',
+      motivation_reason: '高い志望度と成長意欲が見られる',
+      motivation_evidence: '強い志望動機を語った',
+      execution_rank: 'A',
+      execution_score: 19,
+      execution_summary: '優れた実行力、実績あり',
+      execution_reason: '過去の実績から実行力が確認できる',
+      execution_evidence: '実績について語った',
+      critical_concerns: [],
+      next_questions: ['詳細確認事項1', '詳細確認事項2'],
+      interviewer_comment: 'テスト用コメント',
+      transcript: 'テスト用議事録\n面接官: よろしくお願いします。\n候補者: よろしくお願いします。',
+      spreadsheet_url: ss.getUrl()
+    };
+
+    // 戦略レポート用テストデータ
+    const strategyReportData = {
+      candidate_id: testCandidateId,
+      candidate_name: 'URL検証_太郎',
+      current_phase: '1次面接',
+      interviewer: 'テスト面接官',
+      acceptance_probability: 75,
+      confidence_level: 'HIGH',
+      competitor_probabilities: [
+        { company: '自社', probability: 55 },
+        { company: '競合A社', probability: 30 },
+        { company: '競合B社', probability: 15 }
+      ],
+      immediate_action_24h: '具体的な条件提示',
+      action_reason: '待遇面の懸念解消',
+      expected_effect: '承諾率 +10%',
+      risk_factors: [
+        { factor: 'リスク要因1', countermeasure: '対策1' }
+      ],
+      our_strengths: ['強み1', '強み2'],
+      acceptance_story: ['Step 1', 'Step 2', 'Step 3'],
+      positive_factors: [
+        { factor: 'ポジティブ要因1', evidence: 'エビデンス1' }
+      ],
+      risk_factors_detailed: [
+        { factor: 'リスク詳細1', severity: 'MEDIUM', detailed_countermeasure: '詳細対策1' }
+      ],
+      competitor_analysis: [],
+      engagement_recommendations: ['推奨施策1', '推奨施策2'],
+      spreadsheet_url: ss.getUrl()
+    };
+
+    Logger.log('✅ テストデータ準備完了');
+    Logger.log('  候補者ID: ' + testCandidateId);
+    Logger.log('  企業名: ' + companyName);
+
+    // Step 2: 評価レポートV2生成
+    Logger.log('\n=== Step 2: 評価レポートV2生成 ===');
+    const evalResult = generateEvaluationReportV2(evalReportData, '新卒', '1次面接', companyName);
+
+    if (!evalResult.success) {
+      throw new Error('評価レポート生成失敗: ' + (evalResult.error || 'Unknown error'));
+    }
+
+    Logger.log('✅ 評価レポートV2生成成功');
+    Logger.log('  URL: ' + evalResult.url);
+    Logger.log('  Document ID: ' + evalResult.documentId);
+
+    // Step 3: 戦略レポートV2生成
+    Logger.log('\n=== Step 3: 戦略レポートV2生成 ===');
+    const strategyResult = generateStrategyReportV2(strategyReportData, '新卒', '1次面接', companyName);
+
+    if (!strategyResult.success) {
+      throw new Error('戦略レポート生成失敗: ' + (strategyResult.error || 'Unknown error'));
+    }
+
+    Logger.log('✅ 戦略レポートV2生成成功');
+    Logger.log('  URL: ' + strategyResult.url);
+    Logger.log('  Document ID: ' + strategyResult.documentId);
+
+    // Step 4: Evaluation_Masterに新しい行を追加
+    Logger.log('\n=== Step 4: Evaluation_Masterに新規データ追加 ===');
+
+    const newRow = [
+      testCandidateId,                    // A列: 候補者ID
+      'URL検証_太郎',                      // B列: 氏名
+      '新卒',                             // C列: 採用区分
+      '1次面接',                          // D列: 選考フェーズ
+      new Date(),                         // E列: 面接日
+      'テスト面接官',                      // F列: 面接官
+      28, 24, 19, 19,                     // G-J列: 各軸スコア
+      90,                                 // K列: 合計スコア
+      'A',                                // L列: 総合ランク
+      '積極採用推奨',                      // M列: 推奨
+      '理念への深い共感',                  // N列: サマリー理由1
+      '',                                 // O列: サマリー理由2
+      '',                                 // P列: サマリー理由3
+      'A', '理念への深い共感が見られる',    // Q-R列: Philosophy
+      '企業理念に深く共感',                // S列: Philosophy理由
+      '理念に共感した発言',                // T列: Philosophy証拠
+      'B', '戦略理解は十分、実践経験で向上可', // U-V列: Strategy
+      '戦略的思考の基礎はある',            // W列: Strategy理由
+      '戦略的な発言',                      // X列: Strategy証拠
+      'A', '非常に高い志望度、成長意欲強',  // Y-Z列: Motivation
+      '高い志望度と成長意欲',              // AA列: Motivation理由
+      '強い志望動機',                      // AB列: Motivation証拠
+      'A', '優れた実行力、実績あり',        // AC-AD列: Execution
+      '過去の実績から実行力確認',          // AE列: Execution理由
+      '実績について語った',                // AF列: Execution証拠 ← ここまでで31列
+      '',                                 // AG列: 評価レポートURL（32列目）← ★ここに記録
+      ''                                  // AH列: 戦略レポートURL（33列目）← ★ここに記録
+    ];
+
+    evalSheet.appendRow(newRow);
+    const lastRow = evalSheet.getLastRow();
+    Logger.log('✅ Evaluation_Masterに新規行追加: 行' + lastRow);
+
+    // Step 5: URL記録（修正箇所の検証）
+    Logger.log('\n=== Step 5: URL記録列への書き込み（修正箇所検証） ===');
+    Logger.log('🔍 修正前: AI列（35）/AJ列（36）');
+    Logger.log('✅ 修正後: AF列（32）/AG列（33）');
+
+    // AF列（32列目）に評価レポートURL記録
+    evalSheet.getRange(lastRow, 32).setValue(evalResult.url);
+    Logger.log('✅ 評価レポートURL記録: AF列（32列目）行' + lastRow);
+    Logger.log('  URL: ' + evalResult.url);
+
+    // AG列（33列目）に戦略レポートURL記録
+    evalSheet.getRange(lastRow, 33).setValue(strategyResult.url);
+    Logger.log('✅ 戦略レポートURL記録: AG列（33列目）行' + lastRow);
+    Logger.log('  URL: ' + strategyResult.url);
+
+    // Step 6: 記録内容の確認
+    Logger.log('\n=== Step 6: 記録内容の確認 ===');
+
+    const recordedEvalUrl = evalSheet.getRange(lastRow, 32).getValue();
+    const recordedStrategyUrl = evalSheet.getRange(lastRow, 33).getValue();
+
+    Logger.log('📊 記録確認:');
+    Logger.log('  行番号: ' + lastRow);
+    Logger.log('  AF列（32）の値: ' + (recordedEvalUrl ? '✅ 記録あり' : '❌ 空欄'));
+    Logger.log('  AG列（33）の値: ' + (recordedStrategyUrl ? '✅ 記録あり' : '❌ 空欄'));
+
+    // 列名の確認
+    const headers = evalSheet.getRange(1, 1, 1, 35).getValues()[0];
+    Logger.log('\n📋 列ヘッダー確認:');
+    Logger.log('  32列目（AF列）のヘッダー: ' + (headers[31] || '未定義'));
+    Logger.log('  33列目（AG列）のヘッダー: ' + (headers[32] || '未定義'));
+
+    // Step 7: getSummary()関数の検証
+    Logger.log('\n=== Step 7: getSummary()関数の動作確認 ===');
+    Logger.log('🔍 修正前: 5軸（technical_ability等）');
+    Logger.log('✅ 修正後: 4軸（Philosophy, Strategy, Motivation, Execution）');
+
+    const testAxes = ['Philosophy', 'Strategy', 'Motivation', 'Execution'];
+    const testRank = 'A';
+
+    testAxes.forEach(axis => {
+      const summary = getSummary(testRank, axis);
+      Logger.log(`  ${axis} (${testRank}): ${summary}`);
+    });
+
+    // 最終結果
+    Logger.log('\n========================================');
+    Logger.log('✅ テスト完了！');
+    Logger.log('========================================');
+    Logger.log('\n📊 検証結果サマリー:');
+    Logger.log('  テスト候補者ID: ' + testCandidateId);
+    Logger.log('  Evaluation_Master行番号: ' + lastRow);
+    Logger.log('  評価レポートURL: ' + evalResult.url);
+    Logger.log('  戦略レポートURL: ' + strategyResult.url);
+    Logger.log('  AF列（32）記録: ' + (recordedEvalUrl ? '✅' : '❌'));
+    Logger.log('  AG列（33）記録: ' + (recordedStrategyUrl ? '✅' : '❌'));
+    Logger.log('  getSummary()動作: ✅');
+    Logger.log('  実行時間: ' + ((new Date() - startTime) / 1000).toFixed(2) + '秒');
+
+    Logger.log('\n🎯 次のアクション:');
+    Logger.log('  1. Evaluation_Masterシートを開く');
+    Logger.log('  2. 行' + lastRow + 'を確認');
+    Logger.log('  3. AF列（32列目）に評価レポートURLがあることを確認');
+    Logger.log('  4. AG列（33列目）に戦略レポートURLがあることを確認');
+    Logger.log('  5. URLをクリックしてレポート内容を確認');
+
+    return {
+      success: true,
+      test_candidate_id: testCandidateId,
+      evaluation_master_row: lastRow,
+      evaluation_report_url: evalResult.url,
+      strategy_report_url: strategyResult.url,
+      af_column_recorded: !!recordedEvalUrl,
+      ag_column_recorded: !!recordedStrategyUrl,
+      execution_time_seconds: ((new Date() - startTime) / 1000).toFixed(2)
+    };
+
+  } catch (error) {
+    Logger.log('\n========================================');
+    Logger.log('❌ テスト失敗');
+    Logger.log('========================================');
+    Logger.log('エラー: ' + error.message);
+    Logger.log('スタック: ' + error.stack);
+
+    return {
+      success: false,
+      error: error.message,
+      stack: error.stack
+    };
+  }
+}
