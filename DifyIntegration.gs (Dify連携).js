@@ -615,6 +615,19 @@ function appendToEngagementLog(data) {
   // ログIDの生成
   const logId = data.log_id || `LOG_${new Date().getTime()}`;
 
+  // confidence_levelを日本語に変換
+  const confidenceLevelMap = {
+    'HIGH': '高',
+    'MEDIUM': '中',
+    'LOW': '低'
+  };
+  const confidenceLevel = confidenceLevelMap[data.confidence_level] || data.confidence_level || '';
+
+  // acceptance_rate_aiをパーセント表記に変換
+  const acceptanceRateAi = data.acceptance_rate_ai
+    ? (typeof data.acceptance_rate_ai === 'number' ? `${data.acceptance_rate_ai.toFixed(2)}%` : data.acceptance_rate_ai)
+    : '';
+
   // 行データの組み立て（Engagement_Logの正しい列構造に合わせる）
   const row = [
     logId,                                        // 1: log_id
@@ -623,9 +636,9 @@ function appendToEngagementLog(data) {
     data.timestamp || new Date(),                 // 4: timestamp
     data.contact_type || '',                      // 5: contact_type
     data.acceptance_rate_rule || '',              // 6: acceptance_rate_rule
-    data.acceptance_rate_ai || 0,                 // 7: acceptance_rate_ai
+    acceptanceRateAi,                             // 7: acceptance_rate_ai（パーセント表記）
     data.acceptance_rate_final || '',             // 8: acceptance_rate_final
-    data.confidence_level || '',                  // 9: confidence_level
+    confidenceLevel,                              // 9: confidence_level（日本語）
     data.motivation_score || 0,                   // 10: motivation_score
     data.competitive_advantage_score || 0,        // 11: competitive_advantage_score
     data.concern_resolution_score || 0,           // 12: concern_resolution_score
@@ -1474,7 +1487,7 @@ function testFullWorkflow() {
       acceptance_rate_rule: '70%',
       acceptance_rate_ai: 65,
       acceptance_rate_final: '65%',
-      confidence_level: 'HIGH',
+      confidence_level: '高',  // 日本語で記録
       motivation_score: 18,
       competitive_advantage_score: 75,
       concern_resolution_score: 80,
@@ -1627,7 +1640,7 @@ function testIndividualFunctions() {
       acceptance_rate_rule: '70%',
       acceptance_rate_ai: 75,
       acceptance_rate_final: '75%',
-      confidence_level: 'HIGH',
+      confidence_level: '中',  // 日本語で記録
       motivation_score: 20,
       competitive_advantage_score: 80,
       concern_resolution_score: 85,
