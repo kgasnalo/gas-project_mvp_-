@@ -13,9 +13,9 @@
  * 2. 関数選択で「setCompanyName」を選択
  * 3. 実行ボタンをクリック
  *
- * @param {string} companyName - 企業名（デフォルト: "アマネク"）
+ * @param {string} companyName - 企業名（デフォルト: "テスト株式会社"）
  */
-function setCompanyName(companyName = "アマネク") {
+function setCompanyName(companyName = "テスト株式会社") {
   Logger.log('=== 企業名設定開始 ===');
 
   try {
@@ -310,9 +310,9 @@ function testPhaseAComplete() {
  * 3. 実行ボタンをクリック
  * 4. ログを確認
  *
- * @param {string} companyName - 企業名（デフォルト: "アマネク"）
+ * @param {string} companyName - 企業名（デフォルト: "テスト株式会社"）
  */
-function runInitialSetup(companyName = "アマネク") {
+function runInitialSetup(companyName = "テスト株式会社") {
   Logger.log('');
   Logger.log('='.repeat(60));
   Logger.log('=== Phase A 初期設定 一括実行 ===');
