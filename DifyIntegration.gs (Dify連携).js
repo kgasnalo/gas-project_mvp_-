@@ -615,32 +615,30 @@ function appendToEngagementLog(data) {
   // ログIDの生成
   const logId = data.log_id || `LOG_${new Date().getTime()}`;
 
-  // 行データの組み立て（シート構造に合わせて調整が必要な場合があります）
+  // 行データの組み立て（Engagement_Logの正しい列構造に合わせる）
   const row = [
-    logId,                                    // A: log_id
-    data.candidate_id || '',                  // B: candidate_id
-    data.candidate_name || data['氏名'] || '', // C: 氏名
-    data.timestamp || new Date(),             // D: timestamp
-    data.contact_type || '',                  // E: contact_type
-    data.acceptance_rate_ai || 0,             // F: acceptance_rate_ai
-    data.confidence_level || '',              // G: confidence_level
-    data.motivation_score || 0                // H: motivation_score
+    logId,                                        // 1: log_id
+    data.candidate_id || '',                      // 2: candidate_id
+    data.candidate_name || data['氏名'] || '',     // 3: 氏名
+    data.timestamp || new Date(),                 // 4: timestamp
+    data.contact_type || '',                      // 5: contact_type
+    data.acceptance_rate_rule || '',              // 6: acceptance_rate_rule
+    data.acceptance_rate_ai || 0,                 // 7: acceptance_rate_ai
+    data.acceptance_rate_final || '',             // 8: acceptance_rate_final
+    data.confidence_level || '',                  // 9: confidence_level
+    data.motivation_score || 0,                   // 10: motivation_score
+    data.competitive_advantage_score || 0,        // 11: competitive_advantage_score
+    data.concern_resolution_score || 0,           // 12: concern_resolution_score
+    data.core_motivation || '',                   // 13: core_motivation
+    data.top_concern || '',                       // 14: top_concern
+    data.concern_category || '',                  // 15: concern_category
+    data.competitors || '',                       // 16: competitors
+    data.competitive_advantage || '',             // 17: competitive_advantage
+    data.next_action || '',                       // 18: next_action
+    data.action_deadline || '',                   // 19: action_deadline
+    data.action_priority || '',                   // 20: action_priority
+    data.doc_url || ''                            // 21: doc_url
   ];
-
-  // 追加のフィールド（シート構造により異なる）
-  if (sheet.getLastColumn() > 8) {
-    row.push(
-      data.core_motivation || '',             // I: core_motivation
-      data.top_concern || '',                 // J: top_concern
-      data.competitors || '',                 // K: competitors
-      data.next_action || '',                 // L: next_action
-      data.action_priority || '',             // M: action_priority
-      data.action_deadline || '',             // N: action_deadline
-      data.action_status || '未実施',         // O: action_status
-      data.action_result || '',               // P: action_result
-      data.notes || ''                        // Q: notes
-    );
-  }
 
   // データ追加
   sheet.appendRow(row);
