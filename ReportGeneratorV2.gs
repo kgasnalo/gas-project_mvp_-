@@ -525,16 +525,101 @@ function addDetailedStrategy(body, data) {
   body.appendParagraph(''); // 空行
 
   const competitors = data.competitor_analysis || [];
-  competitors.forEach(comp => {
-    body.appendParagraph(`${comp.company}:`).setBold(true);
-    body.appendParagraph(`- 強み: ${comp.strengths}`);
-    body.appendParagraph(`- 弱み: ${comp.weaknesses}`);
-    body.appendParagraph(`- 対抗策: ${comp.counterstrategy}`);
-    body.appendParagraph(''); // 空行
-  });
 
   if (competitors.length === 0) {
     body.appendParagraph('競合分析データなし');
+  } else {
+    competitors.forEach((comp, index) => {
+      // 企業名（見出し）
+      body.appendParagraph(`## ${comp.company}`).setBold(true);
+      body.appendParagraph('');
+
+      // 給与・待遇
+      if (comp.compensation) {
+        body.appendParagraph('### 給与・待遇').setBold(true);
+
+        if (comp.compensation.average_salary) {
+          body.appendParagraph(`- 平均年収: ${comp.compensation.average_salary}`);
+        }
+        if (comp.compensation.starting_salary && comp.compensation.starting_salary !== '情報なし') {
+          body.appendParagraph(`- 初任給: ${comp.compensation.starting_salary}`);
+        }
+        if (comp.compensation.details) {
+          body.appendParagraph(`- 詳細: ${comp.compensation.details}`);
+        }
+        body.appendParagraph('');
+      }
+
+      // 企業文化・働き方
+      if (comp.culture && (comp.culture.work_hours !== '情報なし' ||
+          comp.culture.work_life_balance !== '情報なし' ||
+          comp.culture.remote_work !== '情報なし')) {
+        body.appendParagraph('### 企業文化・働き方').setBold(true);
+
+        if (comp.culture.work_hours && comp.culture.work_hours !== '情報なし') {
+          body.appendParagraph(`- 平均残業時間: ${comp.culture.work_hours}`);
+        }
+        if (comp.culture.work_life_balance && comp.culture.work_life_balance !== '情報なし') {
+          body.appendParagraph(`- ワークライフバランス: ${comp.culture.work_life_balance}`);
+        }
+        if (comp.culture.remote_work && comp.culture.remote_work !== '情報なし') {
+          body.appendParagraph(`- リモートワーク: ${comp.culture.remote_work}`);
+        }
+        body.appendParagraph('');
+      }
+
+      // 評判・口コミ
+      if (comp.reputation && (comp.reputation.rating !== '情報なし' ||
+          comp.reputation.positive !== '情報なし' ||
+          comp.reputation.negative !== '情報なし')) {
+        body.appendParagraph('### 評判・口コミ').setBold(true);
+
+        if (comp.reputation.rating && comp.reputation.rating !== '情報なし') {
+          body.appendParagraph(`- 総合評価: ${comp.reputation.rating}`);
+        }
+        if (comp.reputation.positive && comp.reputation.positive !== '情報なし') {
+          body.appendParagraph(`- ポジティブ: ${comp.reputation.positive}`);
+        }
+        if (comp.reputation.negative && comp.reputation.negative !== '情報なし') {
+          body.appendParagraph(`- ネガティブ: ${comp.reputation.negative}`);
+        }
+        body.appendParagraph('');
+      }
+
+      // 競合の強み
+      if (comp.their_strengths) {
+        body.appendParagraph('### 競合の強み').setBold(true);
+        body.appendParagraph(comp.their_strengths);
+        body.appendParagraph('');
+      }
+
+      // 競合の弱み
+      if (comp.their_weaknesses) {
+        body.appendParagraph('### 競合の弱み').setBold(true);
+        body.appendParagraph(comp.their_weaknesses);
+        body.appendParagraph('');
+      }
+
+      // 自社の対抗策
+      if (comp.our_counter_strategy) {
+        body.appendParagraph('### 自社の対抗策').setBold(true);
+        body.appendParagraph(comp.our_counter_strategy);
+        body.appendParagraph('');
+      }
+
+      // 承諾確率推定
+      if (comp.estimated_probability !== undefined && comp.estimated_probability !== null) {
+        body.appendParagraph('### 承諾確率推定').setBold(true);
+        body.appendParagraph(`${comp.estimated_probability}%`);
+        body.appendParagraph('');
+      }
+
+      // 区切り線（最後の企業以外）
+      if (index < competitors.length - 1) {
+        body.appendHorizontalRule();
+        body.appendParagraph('');
+      }
+    });
   }
 
   body.appendHorizontalRule();
