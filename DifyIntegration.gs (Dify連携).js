@@ -650,7 +650,8 @@ function appendToEngagementLog(data) {
     data.next_action || '',                       // 18: next_action
     data.action_deadline || '',                   // 19: action_deadline
     data.action_priority || '',                   // 20: action_priority
-    data.doc_url || ''                            // 21: doc_url
+    data.doc_url || '',                           // 21: doc_url
+    JSON.stringify(data.competitor_details || []) // 22: competitor_details
   ];
 
   // データ追加
@@ -1130,7 +1131,7 @@ function doPost(e) {
           })),
 
           // 競合分析
-          competitor_analysis: [],
+          competitor_analysis: acceptanceData.competitor_details || [],
 
           // 推奨施策
           engagement_recommendations: acceptanceData.engagement_strategy ? [
