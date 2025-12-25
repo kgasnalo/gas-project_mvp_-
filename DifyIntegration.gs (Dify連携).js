@@ -352,11 +352,11 @@ function writeToEvaluationMaster(data) {
     data.workflow_id || '',                 // AB
 
     // Phase A追加: 次回質問（AC-AG列）
-    data.next_question_1 || '',             // AC
-    data.next_question_2 || '',             // AD
-    data.next_question_3 || '',             // AE
-    data.next_question_4 || '',             // AF
-    data.next_question_5 || '',             // AG
+    data.次回質問1 || '',                   // AC
+    data.次回質問2 || '',                   // AD
+    data.次回質問3 || '',                   // AE
+    data.次回質問4 || '',                   // AF
+    data.次回質問5 || '',                   // AG
     data.competitor_analysis || '',         // AH
     data.evaluation_report_url || '',       // AI
     data.strategy_report_url || ''          // AJ
@@ -919,6 +919,16 @@ function doPost(e) {
       evaluationMasterData = typeof data.evaluation_master === 'string'
         ? JSON.parse(data.evaluation_master)
         : data.evaluation_master;
+
+      // デバッグログ: 次回質問データの確認
+      Logger.log('=== Evaluation_Master データ確認 ===');
+      Logger.log('evaluation_master型: ' + typeof evaluationMasterData);
+      Logger.log('次回質問1: ' + evaluationMasterData.次回質問1);
+      Logger.log('次回質問2: ' + evaluationMasterData.次回質問2);
+      Logger.log('次回質問3: ' + evaluationMasterData.次回質問3);
+      Logger.log('次回質問4: ' + evaluationMasterData.次回質問4);
+      Logger.log('次回質問5: ' + evaluationMasterData.次回質問5);
+
       results.evaluation_master = writeToEvaluationMaster(evaluationMasterData);
       Logger.log('✅ Evaluation_Master: ' + results.evaluation_master);
     }
@@ -1002,11 +1012,11 @@ function doPost(e) {
 
           // 次回質問
           next_questions: [
-            evalData.next_question_1,
-            evalData.next_question_2,
-            evalData.next_question_3,
-            evalData.next_question_4,
-            evalData.next_question_5
+            evalData.次回質問1,
+            evalData.次回質問2,
+            evalData.次回質問3,
+            evalData.次回質問4,
+            evalData.次回質問5
           ].filter(q => q),
 
           // 面接官コメント
