@@ -2353,3 +2353,77 @@ function testReportGenerationWithURLRecording() {
     };
   }
 }
+
+/**
+ * Engagement_Logシートに22列目（competitor_details）を追加
+ * Phase B1.5対応: 競合分析詳細データ保存用カラム
+ *
+ * 実行方法:
+ * 1. GASエディタでこの関数を開く
+ * 2. 関数を選択して「実行」ボタンをクリック
+ * 3. 初回実行時は権限承認が必要
+ */
+function addCompetitorDetailsColumn() {
+  Logger.log('=== Engagement_Log列追加開始 ===');
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Engagement_Log');
+
+    if (!sheet) {
+      throw new Error('Engagement_Logシートが見つかりません');
+    }
+
+    // 現在の列数を確認
+    const lastColumn = sheet.getLastColumn();
+    Logger.log(`現在の列数: ${lastColumn}`);
+
+    // ヘッダー行（1行目）を取得
+    const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+    Logger.log(`既存ヘッダー数: ${headers.length}`);
+    Logger.log(`最後のヘッダー: ${headers[headers.length - 1]}`);
+
+    // competitor_detailsが既に存在するか確認
+    if (headers.includes('competitor_details')) {
+      Logger.log('⚠️ competitor_details列は既に存在します');
+      Logger.log('列番号: ' + (headers.indexOf('competitor_details') + 1));
+      return {
+        success: true,
+        already_exists: true,
+        column_index: headers.indexOf('competitor_details') + 1
+      };
+    }
+
+    // 22列目に追加（既存が21列の場合）
+    if (lastColumn === 21) {
+      Logger.log('22列目にcompetitor_detailsを追加します...');
+      sheet.getRange(1, 22).setValue('competitor_details');
+      Logger.log('✅ 列追加完了: AV列（22列目）');
+
+      return {
+        success: true,
+        added: true,
+        column_index: 22,
+        column_letter: 'AV'
+      };
+    } else if (lastColumn < 21) {
+      throw new Error(`列数が不足しています（現在: ${lastColumn}列, 必要: 21列）`);
+    } else {
+      Logger.log(`⚠️ 既に22列以上存在します（${lastColumn}列）`);
+      Logger.log('手動確認が必要です');
+      return {
+        success: false,
+        error: `既に${lastColumn}列存在します。手動で確認してください。`
+      };
+    }
+
+  } catch (error) {
+    Logger.log('❌ エラー: ' + error.message);
+    Logger.log('スタック: ' + error.stack);
+    return {
+      success: false,
+      error: error.message,
+      stack: error.stack
+    };
+  }
+}
