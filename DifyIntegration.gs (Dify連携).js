@@ -868,6 +868,13 @@ function doPost(e) {
 
     // ===== 本番モード: データ保存処理 =====
 
+    // デバッグ: 受信データの構造を確認
+    Logger.log('=== 受信データ構造チェック ===');
+    Logger.log('data.validated_input: ' + (data.validated_input ? 'あり' : '❌なし'));
+    Logger.log('data.candidates_master: ' + (data.candidates_master ? 'あり' : 'なし'));
+    Logger.log('data.evaluation_master: ' + (data.evaluation_master ? 'あり' : 'なし'));
+    Logger.log('data.engagement_log: ' + (data.engagement_log ? 'あり' : 'なし'));
+
     const results = {
       candidates_master: null,
       candidate_scores: null,
@@ -954,12 +961,29 @@ function doPost(e) {
       const evalData = evaluationMasterData || {};
 
       // 採用区分と選考フェーズの取得
-      const recruitType = candidateMasterData['採用区分'] || '新卒';
-      const selectionPhase = candidateMasterData['現在ステータス'] || (data.validated_input ? data.validated_input.selection_phase : '1次面接');
+      const recruitType = (candidateMasterData && candidateMasterData['採用区分']) || '新卒';
+      const selectionPhase = (candidateMasterData && candidateMasterData['現在ステータス']) || (data.validated_input ? data.validated_input.selection_phase : '1次面接');
 
       // スプレッドシートURL取得
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const spreadsheetUrl = ss.getUrl();
+
+      // === デバッグ: レポート生成条件の確認 ===
+      Logger.log('=== レポート生成条件チェック ===');
+      Logger.log('candidateMasterData: ' + (candidateMasterData ? 'あり' : 'なし'));
+      Logger.log('evalData: ' + (evalData ? 'あり' : 'なし'));
+      Logger.log('data.validated_input: ' + (data.validated_input ? 'あり' : 'なし'));
+      Logger.log('acceptanceData: ' + (acceptanceData ? 'あり' : 'なし'));
+
+      if (candidateMasterData) {
+        Logger.log('  candidateMasterData.氏名: ' + candidateMasterData['氏名']);
+      }
+      if (evalData) {
+        Logger.log('  evalData.total_rank: ' + evalData.total_rank);
+      }
+      if (data.validated_input) {
+        Logger.log('  validated_input.candidate_id: ' + data.validated_input.candidate_id);
+      }
 
       // 1. 評価レポート生成（V2）
       if (candidateMasterData && evalData && data.validated_input) {
@@ -1043,6 +1067,11 @@ function doPost(e) {
             Logger.log('✅ 評価レポートURL記録: AI列（行' + evalLastRow + '）');
           }
         }
+      } else {
+        Logger.log('⚠️ 評価レポートV2生成スキップ:');
+        if (!candidateMasterData) Logger.log('  - candidateMasterDataなし');
+        if (!evalData) Logger.log('  - evalDataなし');
+        if (!data.validated_input) Logger.log('  - validated_inputなし');
       }
 
       // 2. 戦略レポート生成（V2）
@@ -1125,6 +1154,11 @@ function doPost(e) {
             Logger.log('✅ 戦略レポートURL記録: AJ列（行' + evalLastRow + '）');
           }
         }
+      } else {
+        Logger.log('⚠️ 戦略レポートV2生成スキップ:');
+        if (!candidateMasterData) Logger.log('  - candidateMasterDataなし');
+        if (!acceptanceData) Logger.log('  - acceptanceDataなし');
+        if (!data.validated_input) Logger.log('  - validated_inputなし');
       }
 
       // 3. 評価B以上の場合、フォルダコピー
