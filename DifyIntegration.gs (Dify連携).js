@@ -962,7 +962,9 @@ function doPost(e) {
 
       // 採用区分と選考フェーズの取得
       const recruitType = (candidateMasterData && candidateMasterData['採用区分']) || '新卒';
-      const selectionPhase = (candidateMasterData && candidateMasterData['現在ステータス']) || (data.validated_input ? data.validated_input.selection_phase : '1次面接');
+      const selectionPhase = (candidateMasterData && candidateMasterData['現在ステータス'])
+        || (evaluationMasterData && evaluationMasterData.selection_phase)
+        || '初回面談';
 
       // スプレッドシートURL取得
       const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -986,16 +988,17 @@ function doPost(e) {
       }
 
       // 1. 評価レポート生成（V2）
-      if (candidateMasterData && evalData && data.validated_input) {
+      if (candidateMasterData && evalData) {
         Logger.log('--- 評価レポートV2 生成 ---');
+        Logger.log('✅ validated_input不要で実行');
 
         const evalReportDataV2 = {
           // 基本情報
-          candidate_id: data.validated_input.candidate_id,
+          candidate_id: candidateMasterData.candidate_id || evalData.candidate_id,
           candidate_name: candidateMasterData['氏名'],
           selection_phase: selectionPhase,
           interview_date: evalData.interview_datetime || Utilities.formatDate(new Date(), 'JST', 'yyyy/MM/dd'),
-          interviewer: data.validated_input.interviewer,
+          interviewer: evalData.interviewer || '未設定',
 
           // 総合評価
           total_rank: evalData.total_rank,
@@ -1071,19 +1074,19 @@ function doPost(e) {
         Logger.log('⚠️ 評価レポートV2生成スキップ:');
         if (!candidateMasterData) Logger.log('  - candidateMasterDataなし');
         if (!evalData) Logger.log('  - evalDataなし');
-        if (!data.validated_input) Logger.log('  - validated_inputなし');
       }
 
       // 2. 戦略レポート生成（V2）
-      if (candidateMasterData && acceptanceData && data.validated_input) {
+      if (candidateMasterData && acceptanceData) {
         Logger.log('--- 戦略レポートV2 生成 ---');
+        Logger.log('✅ validated_input不要で実行');
 
         const strategyReportDataV2 = {
           // 基本情報
-          candidate_id: data.validated_input.candidate_id,
+          candidate_id: candidateMasterData.candidate_id || evalData.candidate_id,
           candidate_name: candidateMasterData['氏名'],
           current_phase: selectionPhase,
-          interviewer: data.validated_input.interviewer,
+          interviewer: evalData.interviewer || '未設定',
 
           // 承諾可能性
           acceptance_probability: acceptanceData.acceptance_rate_ai || 0,
@@ -1158,14 +1161,13 @@ function doPost(e) {
         Logger.log('⚠️ 戦略レポートV2生成スキップ:');
         if (!candidateMasterData) Logger.log('  - candidateMasterDataなし');
         if (!acceptanceData) Logger.log('  - acceptanceDataなし');
-        if (!data.validated_input) Logger.log('  - validated_inputなし');
       }
 
       // 3. 評価B以上の場合、フォルダコピー
-      if (evalData && evalData.total_rank && ['A', 'B'].includes(evalData.total_rank)) {
+      if (evalData && evalData.total_rank && ['A', 'B'].includes(evalData.total_rank) && candidateMasterData) {
         Logger.log('--- 評価B以上: フォルダコピー実行 ---');
         const copyResult = copyFolderToGradeB(
-          data.validated_input.candidate_id,
+          candidateMasterData.candidate_id || evalData.candidate_id,
           candidateMasterData['氏名'],
           recruitType,
           companyName
@@ -1183,7 +1185,7 @@ function doPost(e) {
           ['内定', '承諾'].includes(candidateMasterData['現在ステータス'])) {
         Logger.log('--- 内定・承諾: フォルダ移動実行 ---');
         const moveResult = moveFolderToAccepted(
-          data.validated_input.candidate_id,
+          candidateMasterData.candidate_id || evalData.candidate_id,
           candidateMasterData['氏名'],
           recruitType,
           selectionPhase,
@@ -1222,9 +1224,16 @@ function doPost(e) {
     }
 
     // 7. Processing_Log記録
+    const candidateMaster = typeof data.candidates_master === 'string'
+      ? JSON.parse(data.candidates_master)
+      : data.candidates_master;
+    const evalMaster = typeof data.evaluation_master === 'string'
+      ? JSON.parse(data.evaluation_master)
+      : data.evaluation_master;
+
     logProcessing({
-      candidate_id: data.validated_input ? data.validated_input.candidate_id : 'unknown',
-      candidate_name: data.validated_input ? data.validated_input.candidate_name : 'unknown',
+      candidate_id: (candidateMaster && candidateMaster.candidate_id) || (evalMaster && evalMaster.candidate_id) || 'unknown',
+      candidate_name: (candidateMaster && candidateMaster['氏名']) || 'unknown',
       status: 'SUCCESS',
       phase: 'Phase1_Production',
       timestamp: new Date().toISOString(),
