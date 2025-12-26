@@ -18,6 +18,36 @@ function getWebhookUrl() {
   return deploymentUrl;
 }
 
+/**
+ * UTC時刻を日本時間（JST）に変換
+ * @param {string} utcTimeString - UTC時刻の文字列（例: "2025-12-26T14:20:38.886773"）
+ * @return {string} 日本時間の文字列（例: "2025-12-26 23:20:38"）
+ */
+function convertToJST(utcTimeString) {
+  try {
+    // UTC時刻をDateオブジェクトに変換
+    const utcDate = new Date(utcTimeString);
+
+    // 日本時間は UTC+9時間
+    const jstOffset = 9 * 60 * 60 * 1000; // 9時間をミリ秒に変換
+    const jstDate = new Date(utcDate.getTime() + jstOffset);
+
+    // YYYY-MM-DD HH:MM:SS 形式に整形
+    const year = jstDate.getUTCFullYear();
+    const month = String(jstDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(jstDate.getUTCDate()).padStart(2, '0');
+    const hours = String(jstDate.getUTCHours()).padStart(2, '0');
+    const minutes = String(jstDate.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(jstDate.getUTCSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  } catch (error) {
+    Logger.log('convertToJST エラー: ' + error.toString());
+    // エラー時は元の文字列をそのまま返す
+    return utcTimeString;
+  }
+}
+
 
 /**
  * 評価データを処理
@@ -311,7 +341,7 @@ function writeToEvaluationMaster(data) {
   // 行データの組み立て
   const row = [
     evaluationId,                           // A: 評価ID
-    data.interview_datetime || '',          // B: 面接日時
+    convertToJST(data.interview_datetime) || '', // B: 面接日時（日本時間に変換）
     data.candidate_id || '',                // C: 候補者ID
     data.candidate_name || '',              // D: 候補者氏名
     data.recruit_type || '',                // E: 採用区分
@@ -654,7 +684,7 @@ function appendToEngagementLog(data) {
       logId,                                        // 1: log_id
       data.candidate_id || '',                      // 2: candidate_id
       data.candidate_name || data['氏名'] || '',     // 3: 氏名
-      data.timestamp || new Date(),                 // 4: timestamp
+      convertToJST(data.timestamp) || new Date(),   // 4: timestamp（日本時間に変換）
       data.contact_type || '',                      // 5: contact_type
       data.acceptance_rate_rule || '',              // 6: acceptance_rate_rule
       acceptanceRateAi,                             // 7: acceptance_rate_ai（パーセント表記）
@@ -1039,7 +1069,9 @@ function doPost(e) {
           candidate_id: candidateMasterData.candidate_id || evalData.candidate_id,
           candidate_name: candidateMasterData['氏名'],
           selection_phase: selectionPhase,
-          interview_date: evalData.interview_datetime || Utilities.formatDate(new Date(), 'JST', 'yyyy/MM/dd'),
+          interview_date: evalData.interview_datetime
+            ? convertToJST(evalData.interview_datetime).split(' ')[0].replace(/-/g, '/')
+            : Utilities.formatDate(new Date(), 'JST', 'yyyy/MM/dd'),
           interviewer: evalData.interviewer || '未設定',
 
           // 総合評価
@@ -2475,4 +2507,40 @@ function addCompetitorDetailsColumn() {
       stack: error.stack
     };
   }
+}
+
+/**
+ * convertToJST関数のテスト
+ * GASエディタで実行してテスト
+ */
+function testConvertToJST() {
+  Logger.log('=== convertToJST テスト開始 ===');
+
+  const testCases = [
+    {
+      utc: "2025-12-26T14:20:38.886773",
+      expected: "2025-12-26 23:20:38"
+    },
+    {
+      utc: "2025-12-26T01:24:47",
+      expected: "2025-12-26 10:24:47"
+    },
+    {
+      utc: "2025-12-25T15:00:00",
+      expected: "2025-12-26 00:00:00"
+    }
+  ];
+
+  testCases.forEach((test, index) => {
+    const result = convertToJST(test.utc);
+    const passed = result === test.expected;
+
+    Logger.log(`\nテストケース ${index + 1}:`);
+    Logger.log('  UTC入力: ' + test.utc);
+    Logger.log('  JST出力: ' + result);
+    Logger.log('  期待値:   ' + test.expected);
+    Logger.log('  結果:     ' + (passed ? '✅ 成功' : '❌ 失敗'));
+  });
+
+  Logger.log('\n=== convertToJST テスト完了 ===');
 }
