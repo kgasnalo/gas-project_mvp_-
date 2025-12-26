@@ -604,61 +604,92 @@ function appendToDifyWorkflowLog(data) {
  * @return {string} - ログID
  */
 function appendToEngagementLog(data) {
-  const sheet = SpreadsheetApp
-    .getActiveSpreadsheet()
-    .getSheetByName('Engagement_Log');
+  try {
+    Logger.log('=== appendToEngagementLog 開始 ===');
+    Logger.log('受信データ型: ' + typeof data);
+    Logger.log('competitor_details存在: ' + (data.competitor_details ? 'YES' : 'NO'));
+    if (data.competitor_details) {
+      Logger.log('competitor_details型: ' + typeof data.competitor_details);
+      Logger.log('competitor_details数: ' + (Array.isArray(data.competitor_details) ? data.competitor_details.length : 'N/A'));
+    }
 
-  if (!sheet) {
-    throw new Error('Engagement_Logシートが見つかりません');
+    const sheet = SpreadsheetApp
+      .getActiveSpreadsheet()
+      .getSheetByName('Engagement_Log');
+
+    if (!sheet) {
+      Logger.log('❌ ERROR: Engagement_Logシートが見つかりません');
+      throw new Error('Engagement_Logシートが見つかりません');
+    }
+
+    Logger.log('✅ シート取得成功');
+
+    // 現在の列数を確認
+    const lastColumn = sheet.getLastColumn();
+    Logger.log('現在の列数: ' + lastColumn);
+
+    if (lastColumn < 22) {
+      Logger.log('❌ ERROR: 列数が不足しています。期待: 22列、実際: ' + lastColumn);
+      throw new Error(`列数が不足しています（期待: 22列、実際: ${lastColumn}列）`);
+    }
+
+    // ログIDの生成
+    const logId = data.log_id || `LOG_${new Date().getTime()}`;
+
+    // confidence_levelを日本語に変換
+    const confidenceLevelMap = {
+      'HIGH': '高',
+      'MEDIUM': '中',
+      'LOW': '低'
+    };
+    const confidenceLevel = confidenceLevelMap[data.confidence_level] || data.confidence_level || '';
+
+    // acceptance_rate_aiをパーセント表記に変換
+    const acceptanceRateAi = data.acceptance_rate_ai
+      ? (typeof data.acceptance_rate_ai === 'number' ? `${data.acceptance_rate_ai.toFixed(2)}%` : data.acceptance_rate_ai)
+      : '';
+
+    // 行データの組み立て（Engagement_Logの正しい列構造に合わせる）
+    const row = [
+      logId,                                        // 1: log_id
+      data.candidate_id || '',                      // 2: candidate_id
+      data.candidate_name || data['氏名'] || '',     // 3: 氏名
+      data.timestamp || new Date(),                 // 4: timestamp
+      data.contact_type || '',                      // 5: contact_type
+      data.acceptance_rate_rule || '',              // 6: acceptance_rate_rule
+      acceptanceRateAi,                             // 7: acceptance_rate_ai（パーセント表記）
+      data.acceptance_rate_final || '',             // 8: acceptance_rate_final
+      confidenceLevel,                              // 9: confidence_level（日本語）
+      data.motivation_score || 0,                   // 10: motivation_score
+      data.competitive_advantage_score || 0,        // 11: competitive_advantage_score
+      data.concern_resolution_score || 0,           // 12: concern_resolution_score
+      data.core_motivation || '',                   // 13: core_motivation
+      data.top_concern || '',                       // 14: top_concern
+      data.concern_category || '',                  // 15: concern_category
+      data.competitors || '',                       // 16: competitors
+      data.competitive_advantage || '',             // 17: competitive_advantage
+      data.next_action || '',                       // 18: next_action
+      data.action_deadline || '',                   // 19: action_deadline
+      data.action_priority || '',                   // 20: action_priority
+      data.doc_url || '',                           // 21: doc_url
+      JSON.stringify(data.competitor_details || []) // 22: competitor_details
+    ];
+
+    Logger.log('row配列の長さ: ' + row.length);
+    Logger.log('row[21] (competitor_details JSON): ' + (row[21] ? row[21].substring(0, 100) + '...' : 'empty'));
+
+    // データ追加
+    sheet.appendRow(row);
+
+    Logger.log('✅ Engagement_Log追記完了: ' + logId);
+    return logId;
+
+  } catch (error) {
+    Logger.log('=== appendToEngagementLog エラー ===');
+    Logger.log('❌ エラー: ' + error.toString());
+    Logger.log('スタックトレース: ' + error.stack);
+    throw error;
   }
-
-  // ログIDの生成
-  const logId = data.log_id || `LOG_${new Date().getTime()}`;
-
-  // confidence_levelを日本語に変換
-  const confidenceLevelMap = {
-    'HIGH': '高',
-    'MEDIUM': '中',
-    'LOW': '低'
-  };
-  const confidenceLevel = confidenceLevelMap[data.confidence_level] || data.confidence_level || '';
-
-  // acceptance_rate_aiをパーセント表記に変換
-  const acceptanceRateAi = data.acceptance_rate_ai
-    ? (typeof data.acceptance_rate_ai === 'number' ? `${data.acceptance_rate_ai.toFixed(2)}%` : data.acceptance_rate_ai)
-    : '';
-
-  // 行データの組み立て（Engagement_Logの正しい列構造に合わせる）
-  const row = [
-    logId,                                        // 1: log_id
-    data.candidate_id || '',                      // 2: candidate_id
-    data.candidate_name || data['氏名'] || '',     // 3: 氏名
-    data.timestamp || new Date(),                 // 4: timestamp
-    data.contact_type || '',                      // 5: contact_type
-    data.acceptance_rate_rule || '',              // 6: acceptance_rate_rule
-    acceptanceRateAi,                             // 7: acceptance_rate_ai（パーセント表記）
-    data.acceptance_rate_final || '',             // 8: acceptance_rate_final
-    confidenceLevel,                              // 9: confidence_level（日本語）
-    data.motivation_score || 0,                   // 10: motivation_score
-    data.competitive_advantage_score || 0,        // 11: competitive_advantage_score
-    data.concern_resolution_score || 0,           // 12: concern_resolution_score
-    data.core_motivation || '',                   // 13: core_motivation
-    data.top_concern || '',                       // 14: top_concern
-    data.concern_category || '',                  // 15: concern_category
-    data.competitors || '',                       // 16: competitors
-    data.competitive_advantage || '',             // 17: competitive_advantage
-    data.next_action || '',                       // 18: next_action
-    data.action_deadline || '',                   // 19: action_deadline
-    data.action_priority || '',                   // 20: action_priority
-    data.doc_url || '',                           // 21: doc_url
-    JSON.stringify(data.competitor_details || []) // 22: competitor_details
-  ];
-
-  // データ追加
-  sheet.appendRow(row);
-
-  Logger.log(`✅ Engagement_Log追記完了: ${logId}`);
-  return logId;
 }
 
 /**
@@ -917,6 +948,16 @@ function doPost(e) {
       const engagementData = typeof data.engagement_log === 'string'
         ? JSON.parse(data.engagement_log)
         : data.engagement_log;
+
+      // デバッグログ: competitor_details確認
+      Logger.log('=== Engagement_Log データ確認 ===');
+      Logger.log('engagementData型: ' + typeof engagementData);
+      Logger.log('competitor_details存在: ' + (engagementData.competitor_details ? 'YES' : 'NO'));
+      if (engagementData.competitor_details) {
+        Logger.log('competitor_details数: ' + engagementData.competitor_details.length);
+        Logger.log('competitor_details内容: ' + JSON.stringify(engagementData.competitor_details, null, 2));
+      }
+
       results.engagement_log = appendToEngagementLog(engagementData);
       Logger.log('✅ Engagement_Log: ' + results.engagement_log);
     }
@@ -1081,6 +1122,14 @@ function doPost(e) {
       if (candidateMasterData && acceptanceData) {
         Logger.log('--- 戦略レポートV2 生成 ---');
         Logger.log('✅ validated_input不要で実行');
+
+        // デバッグログ: competitor_details確認
+        Logger.log('=== 戦略レポート用データ確認 ===');
+        Logger.log('acceptanceData.competitor_details存在: ' + (acceptanceData.competitor_details ? 'YES' : 'NO'));
+        if (acceptanceData.competitor_details) {
+          Logger.log('competitor_details数: ' + acceptanceData.competitor_details.length);
+          Logger.log('competitor_details内容: ' + JSON.stringify(acceptanceData.competitor_details, null, 2));
+        }
 
         const strategyReportDataV2 = {
           // 基本情報
