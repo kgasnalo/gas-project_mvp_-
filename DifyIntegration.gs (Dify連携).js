@@ -25,8 +25,15 @@ function getWebhookUrl() {
  */
 function convertToJST(utcTimeString) {
   try {
+    // UTC時刻文字列を正規化（'Z'がなければ追加してUTCとして明示）
+    let normalizedUtcString = utcTimeString;
+    if (!utcTimeString.endsWith('Z') && !utcTimeString.includes('+') && !utcTimeString.includes('-', 10)) {
+      // タイムゾーン指定がない場合、'Z'を追加してUTCとして明示
+      normalizedUtcString = utcTimeString.replace(/(\.\d+)?$/, '') + 'Z';
+    }
+
     // UTC時刻をDateオブジェクトに変換
-    const utcDate = new Date(utcTimeString);
+    const utcDate = new Date(normalizedUtcString);
 
     // Utilities.formatDateを使用して日本時間（JST）に変換
     // タイムゾーン 'Asia/Tokyo' を指定
