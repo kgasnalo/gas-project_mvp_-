@@ -28,19 +28,11 @@ function convertToJST(utcTimeString) {
     // UTC時刻をDateオブジェクトに変換
     const utcDate = new Date(utcTimeString);
 
-    // 日本時間は UTC+9時間
-    const jstOffset = 9 * 60 * 60 * 1000; // 9時間をミリ秒に変換
-    const jstDate = new Date(utcDate.getTime() + jstOffset);
+    // Utilities.formatDateを使用して日本時間（JST）に変換
+    // タイムゾーン 'Asia/Tokyo' を指定
+    const jstString = Utilities.formatDate(utcDate, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss');
 
-    // YYYY-MM-DD HH:MM:SS 形式に整形
-    const year = jstDate.getUTCFullYear();
-    const month = String(jstDate.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(jstDate.getUTCDate()).padStart(2, '0');
-    const hours = String(jstDate.getUTCHours()).padStart(2, '0');
-    const minutes = String(jstDate.getUTCMinutes()).padStart(2, '0');
-    const seconds = String(jstDate.getUTCSeconds()).padStart(2, '0');
-
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return jstString;
   } catch (error) {
     Logger.log('convertToJST エラー: ' + error.toString());
     // エラー時は元の文字列をそのまま返す
