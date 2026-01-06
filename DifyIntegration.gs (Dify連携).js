@@ -2814,30 +2814,31 @@ function updateCandidatesMaster(candidateId) {
     // デバッグ: Evaluation_Masterヘッダー確認
     Logger.log('Evaluation_Master ヘッダー: ' + JSON.stringify(evalHeaders));
 
-    const evalCandidateIdColIndex = evalHeaders.indexOf('candidate_id');
-    const totalRankColIndex = evalHeaders.indexOf('total_rank');
-    const totalScoreColIndex = evalHeaders.indexOf('total_score');
-    const interviewDateColIndex = evalHeaders.indexOf('interview_date');
+    // 実際のシート列名に修正（日本語列名）
+    const evalCandidateIdColIndex = evalHeaders.indexOf('候補者ID');
+    const totalRankColIndex = evalHeaders.indexOf('総合ランク');
+    const totalScoreColIndex = evalHeaders.indexOf('総合スコア');
+    const interviewDateColIndex = evalHeaders.indexOf('面接日時');
 
     // デバッグ: Evaluation_Master列インデックス確認
     Logger.log('Evaluation_Master 列インデックス:');
-    Logger.log('  candidate_id: ' + evalCandidateIdColIndex);
-    Logger.log('  total_rank: ' + totalRankColIndex);
-    Logger.log('  total_score: ' + totalScoreColIndex);
-    Logger.log('  interview_date: ' + interviewDateColIndex);
+    Logger.log('  候補者ID: ' + evalCandidateIdColIndex);
+    Logger.log('  総合ランク: ' + totalRankColIndex);
+    Logger.log('  総合スコア: ' + totalScoreColIndex);
+    Logger.log('  面接日時: ' + interviewDateColIndex);
 
     // 列が見つからない場合の警告
     if (evalCandidateIdColIndex === -1) {
-      Logger.log('❌ ERROR: Evaluation_Masterにcandidate_id列が見つかりません');
+      Logger.log('❌ ERROR: Evaluation_Masterに候補者ID列が見つかりません');
     }
     if (totalRankColIndex === -1) {
-      Logger.log('❌ ERROR: Evaluation_Masterにtotal_rank列が見つかりません');
+      Logger.log('❌ ERROR: Evaluation_Masterに総合ランク列が見つかりません');
     }
     if (totalScoreColIndex === -1) {
-      Logger.log('❌ ERROR: Evaluation_Masterにtotal_score列が見つかりません');
+      Logger.log('❌ ERROR: Evaluation_Masterに総合スコア列が見つかりません');
     }
     if (interviewDateColIndex === -1) {
-      Logger.log('❌ ERROR: Evaluation_Masterにinterview_date列が見つかりません');
+      Logger.log('❌ ERROR: Evaluation_Masterに面接日時列が見つかりません');
     }
 
     // 該当候補者の最新評価を取得
@@ -2847,10 +2848,10 @@ function updateCandidatesMaster(candidateId) {
 
     Logger.log('Evaluation_Master データ行数: ' + (evalData.length - 1));
 
-    // デバッグ: 最後の5行のcandidate_idを出力
+    // デバッグ: 最後の5行の候補者IDを出力
     Logger.log('Evaluation_Master 最後の5行:');
     for (let i = Math.max(1, evalData.length - 5); i < evalData.length; i++) {
-      Logger.log('  行' + i + ' candidate_id: ' + evalData[i][evalCandidateIdColIndex]);
+      Logger.log('  行' + i + ' 候補者ID: ' + evalData[i][evalCandidateIdColIndex]);
     }
 
     for (let i = evalData.length - 1; i >= 1; i--) {
@@ -2860,9 +2861,9 @@ function updateCandidatesMaster(candidateId) {
       if (rowCandidateId === candidateId) {
         interviewCount++;
         Logger.log('✅ Evaluation_Masterで一致: 行' + i);
-        Logger.log('  total_rank: ' + row[totalRankColIndex]);
-        Logger.log('  total_score: ' + row[totalScoreColIndex]);
-        Logger.log('  interview_date: ' + row[interviewDateColIndex]);
+        Logger.log('  総合ランク: ' + row[totalRankColIndex]);
+        Logger.log('  総合スコア: ' + row[totalScoreColIndex]);
+        Logger.log('  面接日時: ' + row[interviewDateColIndex]);
 
         const interviewDate = new Date(row[interviewDateColIndex]);
         if (!latestDate || interviewDate > latestDate) {
@@ -3171,7 +3172,8 @@ function diagnoseSpecificCandidate(targetCandidateId) {
   if (evalSheet) {
     const evalData = evalSheet.getDataRange().getValues();
     const evalHeaders = evalData[0];
-    const candidateIdCol = evalHeaders.indexOf('candidate_id');
+    // 実際の列名に修正
+    const candidateIdCol = evalHeaders.indexOf('候補者ID');
 
     let found = false;
     for (let i = 1; i < evalData.length; i++) {
@@ -3186,7 +3188,7 @@ function diagnoseSpecificCandidate(targetCandidateId) {
     if (!found) {
       Logger.log('❌ 該当データなし');
       // 最後の3行を表示
-      Logger.log('最後の3行のcandidate_id:');
+      Logger.log('最後の3行の候補者ID:');
       for (let i = Math.max(1, evalData.length - 3); i < evalData.length; i++) {
         Logger.log('  行' + (i + 1) + ': ' + evalData[i][candidateIdCol]);
       }
