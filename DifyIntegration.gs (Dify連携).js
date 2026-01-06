@@ -1295,6 +1295,14 @@ function doPost(e) {
     Logger.log('=== Phase 4-2a: データ集計開始 ===');
 
     try {
+      // 重要: 書き込みを強制的に完了させる
+      SpreadsheetApp.flush();
+      Logger.log('SpreadsheetApp.flush() 実行完了');
+
+      // 少し待機（書き込み完了を確実にする）
+      Utilities.sleep(1000);
+      Logger.log('1秒待機完了');
+
       // 候補者IDを取得
       const candidateId = (candidateMasterData && candidateMasterData.candidate_id) ||
                           (evalData && evalData.candidate_id);
@@ -1305,17 +1313,17 @@ function doPost(e) {
         // Candidate_Scoresを更新
         const scoresUpdateResult = updateCandidateScores(candidateId);
         if (scoresUpdateResult.success) {
-          Logger.log('✅ Candidate_Scores更新成功');
+          Logger.log('✅ Candidate_Scores更新成功: ' + JSON.stringify(scoresUpdateResult.updated));
         } else {
-          Logger.log('⚠️ Candidate_Scores更新失敗: ' + scoresUpdateResult.message);
+          Logger.log('⚠️ Candidate_Scores更新失敗: ' + (scoresUpdateResult.message || scoresUpdateResult.error));
         }
 
         // Candidates_Masterを更新
         const masterUpdateResult = updateCandidatesMaster(candidateId);
         if (masterUpdateResult.success) {
-          Logger.log('✅ Candidates_Master更新成功');
+          Logger.log('✅ Candidates_Master更新成功: ' + JSON.stringify(masterUpdateResult.updated));
         } else {
-          Logger.log('⚠️ Candidates_Master更新失敗: ' + masterUpdateResult.message);
+          Logger.log('⚠️ Candidates_Master更新失敗: ' + (masterUpdateResult.message || masterUpdateResult.error));
         }
 
         Logger.log('=== Phase 4-2a: データ集計完了 ===');
@@ -1324,7 +1332,8 @@ function doPost(e) {
       }
 
     } catch (error) {
-      Logger.log('ERROR in Phase 4-2a集計: ' + error.toString());
+      Logger.log('❌ ERROR in Phase 4-2a集計: ' + error.toString());
+      Logger.log('Stack: ' + error.stack);
       // エラーがあっても処理は継続
     }
 
@@ -2765,19 +2774,29 @@ function updateCandidatesMaster(candidateId) {
     // Candidate_Scoresから最新データを取得
     const scoresSheet = ss.getSheetByName('Candidate_Scores');
     if (!scoresSheet) {
+      Logger.log('❌ ERROR: Candidate_Scoresシートが見つかりません');
       throw new Error('Candidate_Scoresシートが見つかりません');
     }
 
     const scoresData = scoresSheet.getDataRange().getValues();
     const scoresHeaders = scoresData[0];
 
+    // デバッグ: Candidate_Scoresヘッダー確認
+    Logger.log('Candidate_Scores ヘッダー: ' + JSON.stringify(scoresHeaders));
+
     const scoresCandidateIdColIndex = scoresHeaders.indexOf('candidate_id');
     const latestAcceptanceColIndex = scoresHeaders.indexOf('最新_承諾可能性（AI予測）');
+
+    // デバッグ: Candidate_Scores列インデックス
+    Logger.log('Candidate_Scores 列インデックス:');
+    Logger.log('  candidate_id: ' + scoresCandidateIdColIndex);
+    Logger.log('  最新_承諾可能性（AI予測）: ' + latestAcceptanceColIndex);
 
     let latestAcceptance = null;
     for (let i = 1; i < scoresData.length; i++) {
       if (scoresData[i][scoresCandidateIdColIndex] === candidateId) {
         latestAcceptance = scoresData[i][latestAcceptanceColIndex];
+        Logger.log('✅ Candidate_Scoresで一致: 行' + i + ', 承諾可能性=' + latestAcceptance);
         break;
       }
     }
@@ -2785,26 +2804,65 @@ function updateCandidatesMaster(candidateId) {
     // Evaluation_Masterから最新の評価データを取得
     const evalSheet = ss.getSheetByName('Evaluation_Master');
     if (!evalSheet) {
+      Logger.log('❌ ERROR: Evaluation_Masterシートが見つかりません');
       throw new Error('Evaluation_Masterシートが見つかりません');
     }
 
     const evalData = evalSheet.getDataRange().getValues();
     const evalHeaders = evalData[0];
 
+    // デバッグ: Evaluation_Masterヘッダー確認
+    Logger.log('Evaluation_Master ヘッダー: ' + JSON.stringify(evalHeaders));
+
     const evalCandidateIdColIndex = evalHeaders.indexOf('candidate_id');
     const totalRankColIndex = evalHeaders.indexOf('total_rank');
     const totalScoreColIndex = evalHeaders.indexOf('total_score');
     const interviewDateColIndex = evalHeaders.indexOf('interview_date');
+
+    // デバッグ: Evaluation_Master列インデックス確認
+    Logger.log('Evaluation_Master 列インデックス:');
+    Logger.log('  candidate_id: ' + evalCandidateIdColIndex);
+    Logger.log('  total_rank: ' + totalRankColIndex);
+    Logger.log('  total_score: ' + totalScoreColIndex);
+    Logger.log('  interview_date: ' + interviewDateColIndex);
+
+    // 列が見つからない場合の警告
+    if (evalCandidateIdColIndex === -1) {
+      Logger.log('❌ ERROR: Evaluation_Masterにcandidate_id列が見つかりません');
+    }
+    if (totalRankColIndex === -1) {
+      Logger.log('❌ ERROR: Evaluation_Masterにtotal_rank列が見つかりません');
+    }
+    if (totalScoreColIndex === -1) {
+      Logger.log('❌ ERROR: Evaluation_Masterにtotal_score列が見つかりません');
+    }
+    if (interviewDateColIndex === -1) {
+      Logger.log('❌ ERROR: Evaluation_Masterにinterview_date列が見つかりません');
+    }
 
     // 該当候補者の最新評価を取得
     let latestEval = null;
     let latestDate = null;
     let interviewCount = 0;
 
+    Logger.log('Evaluation_Master データ行数: ' + (evalData.length - 1));
+
+    // デバッグ: 最後の5行のcandidate_idを出力
+    Logger.log('Evaluation_Master 最後の5行:');
+    for (let i = Math.max(1, evalData.length - 5); i < evalData.length; i++) {
+      Logger.log('  行' + i + ' candidate_id: ' + evalData[i][evalCandidateIdColIndex]);
+    }
+
     for (let i = evalData.length - 1; i >= 1; i--) {
       const row = evalData[i];
-      if (row[evalCandidateIdColIndex] === candidateId) {
+      const rowCandidateId = row[evalCandidateIdColIndex];
+
+      if (rowCandidateId === candidateId) {
         interviewCount++;
+        Logger.log('✅ Evaluation_Masterで一致: 行' + i);
+        Logger.log('  total_rank: ' + row[totalRankColIndex]);
+        Logger.log('  total_score: ' + row[totalScoreColIndex]);
+        Logger.log('  interview_date: ' + row[interviewDateColIndex]);
 
         const interviewDate = new Date(row[interviewDateColIndex]);
         if (!latestDate || interviewDate > latestDate) {
@@ -2819,12 +2877,15 @@ function updateCandidatesMaster(candidateId) {
     }
 
     if (!latestEval) {
-      Logger.log('Evaluation_Masterにデータがありません');
+      Logger.log('⚠️ Evaluation_Masterに該当候補者のデータがありません');
+      Logger.log('検索したcandidate_id: ' + candidateId);
       latestEval = {
         total_rank: '',
         total_score: 0,
         interview_date: ''
       };
+    } else {
+      Logger.log('✅ 最新評価データ取得成功: ' + JSON.stringify(latestEval));
     }
 
     Logger.log('集計データ: ' + JSON.stringify({
@@ -2836,11 +2897,15 @@ function updateCandidatesMaster(candidateId) {
     // Candidates_Masterシートを更新
     const masterSheet = ss.getSheetByName('Candidates_Master');
     if (!masterSheet) {
+      Logger.log('❌ ERROR: Candidates_Masterシートが見つかりません');
       throw new Error('Candidates_Masterシートが見つかりません');
     }
 
     const masterData = masterSheet.getDataRange().getValues();
     const masterHeaders = masterData[0];
+
+    // デバッグ: Candidates_Masterヘッダー確認
+    Logger.log('Candidates_Master ヘッダー: ' + JSON.stringify(masterHeaders));
 
     // 列インデックスを取得
     const masterCandidateIdColIndex = masterHeaders.indexOf('candidate_id');
@@ -2850,39 +2915,81 @@ function updateCandidatesMaster(candidateId) {
     const latestInterviewDateColIndex = masterHeaders.indexOf('最新_面接日');
     const interviewCountColIndex = masterHeaders.indexOf('面接回数');
 
+    // デバッグ: Candidates_Master列インデックス確認
+    Logger.log('Candidates_Master 列インデックス:');
+    Logger.log('  candidate_id: ' + masterCandidateIdColIndex);
+    Logger.log('  最新_承諾可能性: ' + latestAcceptanceMasterColIndex);
+    Logger.log('  最新_評価ランク: ' + latestRankColIndex);
+    Logger.log('  最新_合計スコア: ' + latestScoreColIndex);
+    Logger.log('  最新_面接日: ' + latestInterviewDateColIndex);
+    Logger.log('  面接回数: ' + interviewCountColIndex);
+
+    // 列が見つからない場合の警告
+    if (latestRankColIndex === -1) {
+      Logger.log('❌ ERROR: Candidates_Masterに最新_評価ランク列が見つかりません');
+    }
+    if (latestScoreColIndex === -1) {
+      Logger.log('❌ ERROR: Candidates_Masterに最新_合計スコア列が見つかりません');
+    }
+    if (latestInterviewDateColIndex === -1) {
+      Logger.log('❌ ERROR: Candidates_Masterに最新_面接日列が見つかりません');
+    }
+    if (interviewCountColIndex === -1) {
+      Logger.log('❌ ERROR: Candidates_Masterに面接回数列が見つかりません');
+    }
+
     // 該当候補者の行を探す
     let targetRow = -1;
     for (let i = 1; i < masterData.length; i++) {
       if (masterData[i][masterCandidateIdColIndex] === candidateId) {
         targetRow = i + 1; // スプレッドシートは1始まり
+        Logger.log('✅ Candidates_Masterで候補者発見: 行' + targetRow);
         break;
       }
     }
 
     if (targetRow === -1) {
-      Logger.log('Candidates_Masterに該当候補者が見つかりません');
+      Logger.log('❌ Candidates_Masterに該当候補者が見つかりません');
+      Logger.log('検索したcandidate_id: ' + candidateId);
       return { success: false, message: '候補者なし' };
     }
 
     // データを更新
+    Logger.log('=== Candidates_Master更新開始 ===');
+
     if (latestAcceptanceMasterColIndex !== -1) {
+      Logger.log('最新_承諾可能性を更新: ' + (latestAcceptance || ''));
       masterSheet.getRange(targetRow, latestAcceptanceMasterColIndex + 1).setValue(latestAcceptance || '');
+    } else {
+      Logger.log('⚠️ 最新_承諾可能性列がないためスキップ');
     }
 
     if (latestRankColIndex !== -1) {
+      Logger.log('最新_評価ランクを更新: ' + latestEval.total_rank);
       masterSheet.getRange(targetRow, latestRankColIndex + 1).setValue(latestEval.total_rank);
+    } else {
+      Logger.log('⚠️ 最新_評価ランク列がないためスキップ');
     }
 
     if (latestScoreColIndex !== -1) {
+      Logger.log('最新_合計スコアを更新: ' + latestEval.total_score);
       masterSheet.getRange(targetRow, latestScoreColIndex + 1).setValue(latestEval.total_score);
+    } else {
+      Logger.log('⚠️ 最新_合計スコア列がないためスキップ');
     }
 
     if (latestInterviewDateColIndex !== -1) {
+      Logger.log('最新_面接日を更新: ' + latestEval.interview_date);
       masterSheet.getRange(targetRow, latestInterviewDateColIndex + 1).setValue(latestEval.interview_date);
+    } else {
+      Logger.log('⚠️ 最新_面接日列がないためスキップ');
     }
 
     if (interviewCountColIndex !== -1) {
+      Logger.log('面接回数を更新: ' + interviewCount);
       masterSheet.getRange(targetRow, interviewCountColIndex + 1).setValue(interviewCount);
+    } else {
+      Logger.log('⚠️ 面接回数列がないためスキップ');
     }
 
     Logger.log('✅ Candidates_Master更新完了: 行' + targetRow);
@@ -2937,4 +3044,228 @@ function testPhase42aFunctions() {
     Logger.log('❌ テスト失敗');
     return false;
   }
+}
+
+// ============================================================
+// Phase 4-2a: 診断関数
+// ============================================================
+
+/**
+ * シートの列名を確認する診断関数
+ */
+function diagnoseSheetColumns() {
+  Logger.log('=== シート列名診断開始 ===');
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  // Evaluation_Master
+  const evalSheet = ss.getSheetByName('Evaluation_Master');
+  if (evalSheet) {
+    const evalHeaders = evalSheet.getRange(1, 1, 1, evalSheet.getLastColumn()).getValues()[0];
+    Logger.log('\n【Evaluation_Master ヘッダー】');
+    evalHeaders.forEach((header, index) => {
+      Logger.log('  列' + (index + 1) + ': ' + header);
+    });
+
+    // 必要な列が存在するか確認
+    const requiredEvalColumns = ['candidate_id', 'total_rank', 'total_score', 'interview_date'];
+    requiredEvalColumns.forEach(col => {
+      const index = evalHeaders.indexOf(col);
+      if (index === -1) {
+        Logger.log('  ❌ ' + col + ' が見つかりません！');
+      } else {
+        Logger.log('  ✅ ' + col + ' は列' + (index + 1) + 'にあります');
+      }
+    });
+  } else {
+    Logger.log('❌ Evaluation_Masterシートが見つかりません');
+  }
+
+  // Candidates_Master
+  const masterSheet = ss.getSheetByName('Candidates_Master');
+  if (masterSheet) {
+    const masterHeaders = masterSheet.getRange(1, 1, 1, masterSheet.getLastColumn()).getValues()[0];
+    Logger.log('\n【Candidates_Master ヘッダー】');
+    masterHeaders.forEach((header, index) => {
+      Logger.log('  列' + (index + 1) + ': ' + header);
+    });
+
+    // 必要な列が存在するか確認
+    const requiredMasterColumns = ['candidate_id', '最新_評価ランク', '最新_合計スコア', '最新_面接日', '面接回数'];
+    requiredMasterColumns.forEach(col => {
+      const index = masterHeaders.indexOf(col);
+      if (index === -1) {
+        Logger.log('  ❌ ' + col + ' が見つかりません！');
+      } else {
+        Logger.log('  ✅ ' + col + ' は列' + (index + 1) + 'にあります');
+      }
+    });
+  } else {
+    Logger.log('❌ Candidates_Masterシートが見つかりません');
+  }
+
+  // Candidate_Scores
+  const scoresSheet = ss.getSheetByName('Candidate_Scores');
+  if (scoresSheet) {
+    const scoresHeaders = scoresSheet.getRange(1, 1, 1, scoresSheet.getLastColumn()).getValues()[0];
+    Logger.log('\n【Candidate_Scores ヘッダー】');
+    scoresHeaders.forEach((header, index) => {
+      Logger.log('  列' + (index + 1) + ': ' + header);
+    });
+
+    // 必要な列が存在するか確認
+    const requiredScoresColumns = ['candidate_id', '最新_承諾可能性（AI予測）', '予測の信頼度', '志望度スコア'];
+    requiredScoresColumns.forEach(col => {
+      const index = scoresHeaders.indexOf(col);
+      if (index === -1) {
+        Logger.log('  ❌ ' + col + ' が見つかりません！');
+      } else {
+        Logger.log('  ✅ ' + col + ' は列' + (index + 1) + 'にあります');
+      }
+    });
+  } else {
+    Logger.log('❌ Candidate_Scoresシートが見つかりません');
+  }
+
+  // Engagement_Log
+  const engagementSheet = ss.getSheetByName('Engagement_Log');
+  if (engagementSheet) {
+    const engagementHeaders = engagementSheet.getRange(1, 1, 1, engagementSheet.getLastColumn()).getValues()[0];
+    Logger.log('\n【Engagement_Log ヘッダー】');
+    engagementHeaders.forEach((header, index) => {
+      Logger.log('  列' + (index + 1) + ': ' + header);
+    });
+
+    // 必要な列が存在するか確認
+    const requiredEngagementColumns = ['candidate_id', 'acceptance_rate_ai', 'confidence_level', 'motivation_score'];
+    requiredEngagementColumns.forEach(col => {
+      const index = engagementHeaders.indexOf(col);
+      if (index === -1) {
+        Logger.log('  ❌ ' + col + ' が見つかりません！');
+      } else {
+        Logger.log('  ✅ ' + col + ' は列' + (index + 1) + 'にあります');
+      }
+    });
+  } else {
+    Logger.log('❌ Engagement_Logシートが見つかりません');
+  }
+
+  Logger.log('\n=== シート列名診断完了 ===');
+}
+
+/**
+ * 特定の候補者のデータを全シートで確認する診断関数
+ * @param {string} targetCandidateId - 確認対象の候補者ID（省略時はデフォルト値）
+ */
+function diagnoseSpecificCandidate(targetCandidateId) {
+  targetCandidateId = targetCandidateId || 'CAND_20260106102327'; // テストKKKK
+
+  Logger.log('=== 候補者データ診断開始 ===');
+  Logger.log('対象候補者ID: ' + targetCandidateId);
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  // Evaluation_Master
+  Logger.log('\n【Evaluation_Master】');
+  const evalSheet = ss.getSheetByName('Evaluation_Master');
+  if (evalSheet) {
+    const evalData = evalSheet.getDataRange().getValues();
+    const evalHeaders = evalData[0];
+    const candidateIdCol = evalHeaders.indexOf('candidate_id');
+
+    let found = false;
+    for (let i = 1; i < evalData.length; i++) {
+      if (evalData[i][candidateIdCol] === targetCandidateId) {
+        found = true;
+        Logger.log('✅ 行' + (i + 1) + 'に発見');
+        evalHeaders.forEach((header, colIndex) => {
+          Logger.log('  ' + header + ': ' + evalData[i][colIndex]);
+        });
+      }
+    }
+    if (!found) {
+      Logger.log('❌ 該当データなし');
+      // 最後の3行を表示
+      Logger.log('最後の3行のcandidate_id:');
+      for (let i = Math.max(1, evalData.length - 3); i < evalData.length; i++) {
+        Logger.log('  行' + (i + 1) + ': ' + evalData[i][candidateIdCol]);
+      }
+    }
+  }
+
+  // Candidates_Master
+  Logger.log('\n【Candidates_Master】');
+  const masterSheet = ss.getSheetByName('Candidates_Master');
+  if (masterSheet) {
+    const masterData = masterSheet.getDataRange().getValues();
+    const masterHeaders = masterData[0];
+    const candidateIdCol = masterHeaders.indexOf('candidate_id');
+
+    let found = false;
+    for (let i = 1; i < masterData.length; i++) {
+      if (masterData[i][candidateIdCol] === targetCandidateId) {
+        found = true;
+        Logger.log('✅ 行' + (i + 1) + 'に発見');
+        masterHeaders.forEach((header, colIndex) => {
+          Logger.log('  ' + header + ': ' + masterData[i][colIndex]);
+        });
+      }
+    }
+    if (!found) {
+      Logger.log('❌ 該当データなし');
+    }
+  }
+
+  // Engagement_Log
+  Logger.log('\n【Engagement_Log】');
+  const engagementSheet = ss.getSheetByName('Engagement_Log');
+  if (engagementSheet) {
+    const engagementData = engagementSheet.getDataRange().getValues();
+    const engagementHeaders = engagementData[0];
+    const candidateIdCol = engagementHeaders.indexOf('candidate_id');
+
+    let found = false;
+    for (let i = 1; i < engagementData.length; i++) {
+      if (engagementData[i][candidateIdCol] === targetCandidateId) {
+        found = true;
+        Logger.log('✅ 行' + (i + 1) + 'に発見');
+        // 主要な列のみ表示
+        const importantCols = ['candidate_id', 'acceptance_rate_ai', 'confidence_level', 'motivation_score', 'timestamp'];
+        importantCols.forEach(col => {
+          const colIndex = engagementHeaders.indexOf(col);
+          if (colIndex !== -1) {
+            Logger.log('  ' + col + ': ' + engagementData[i][colIndex]);
+          }
+        });
+      }
+    }
+    if (!found) {
+      Logger.log('❌ 該当データなし');
+    }
+  }
+
+  // Candidate_Scores
+  Logger.log('\n【Candidate_Scores】');
+  const scoresSheet = ss.getSheetByName('Candidate_Scores');
+  if (scoresSheet) {
+    const scoresData = scoresSheet.getDataRange().getValues();
+    const scoresHeaders = scoresData[0];
+    const candidateIdCol = scoresHeaders.indexOf('candidate_id');
+
+    let found = false;
+    for (let i = 1; i < scoresData.length; i++) {
+      if (scoresData[i][candidateIdCol] === targetCandidateId) {
+        found = true;
+        Logger.log('✅ 行' + (i + 1) + 'に発見');
+        scoresHeaders.forEach((header, colIndex) => {
+          Logger.log('  ' + header + ': ' + scoresData[i][colIndex]);
+        });
+      }
+    }
+    if (!found) {
+      Logger.log('❌ 該当データなし');
+    }
+  }
+
+  Logger.log('\n=== 候補者データ診断完了 ===');
 }
