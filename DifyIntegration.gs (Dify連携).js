@@ -3021,8 +3021,8 @@ function updateCandidatesMaster(candidateId) {
 function testPhase42aFunctions() {
   Logger.log('=== Phase 4-2a テスト開始 ===');
 
-  // テスト用の候補者ID（実際に存在するものを使用）
-  const testCandidateId = 'CAND_20251226012324'; // ← 実際のIDに置き換え
+  // テスト用の候補者ID（テストKKKK）
+  const testCandidateId = 'CAND_20260106102327';
 
   Logger.log('テスト候補者ID: ' + testCandidateId);
 
