@@ -1291,6 +1291,43 @@ function doPost(e) {
 
     Logger.log('=== レポート生成V2完了 ===');
 
+    // ===== Phase 4-2a: データ集計 =====
+    Logger.log('=== Phase 4-2a: データ集計開始 ===');
+
+    try {
+      // 候補者IDを取得
+      const candidateId = (candidateMasterData && candidateMasterData.candidate_id) ||
+                          (evalData && evalData.candidate_id);
+
+      if (candidateId) {
+        Logger.log('集計対象候補者ID: ' + candidateId);
+
+        // Candidate_Scoresを更新
+        const scoresUpdateResult = updateCandidateScores(candidateId);
+        if (scoresUpdateResult.success) {
+          Logger.log('✅ Candidate_Scores更新成功');
+        } else {
+          Logger.log('⚠️ Candidate_Scores更新失敗: ' + scoresUpdateResult.message);
+        }
+
+        // Candidates_Masterを更新
+        const masterUpdateResult = updateCandidatesMaster(candidateId);
+        if (masterUpdateResult.success) {
+          Logger.log('✅ Candidates_Master更新成功');
+        } else {
+          Logger.log('⚠️ Candidates_Master更新失敗: ' + masterUpdateResult.message);
+        }
+
+        Logger.log('=== Phase 4-2a: データ集計完了 ===');
+      } else {
+        Logger.log('⚠️ 候補者IDが見つかりません。集計をスキップします。');
+      }
+
+    } catch (error) {
+      Logger.log('ERROR in Phase 4-2a集計: ' + error.toString());
+      // エラーがあっても処理は継続
+    }
+
     // 6. Dify_Workflow_Log追加
     if (data.workflow_log) {
       const workflowData = typeof data.workflow_log === 'string'
@@ -2542,4 +2579,362 @@ function testConvertToJST() {
   });
 
   Logger.log('\n=== convertToJST テスト完了 ===');
+}
+
+// ============================================================
+// Phase 4-2a: データ集計機能
+// ============================================================
+
+/**
+ * Candidates_Masterシートに列を追加する関数
+ */
+function addCandidatesMasterColumns() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName('Candidates_Master');
+
+    if (!sheet) {
+      throw new Error('Candidates_Masterシートが見つかりません');
+    }
+
+    const lastColumn = sheet.getLastColumn();
+    const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+
+    // 必要な列が既に存在するかチェック
+    const requiredColumns = [
+      '最新_承諾可能性',
+      '最新_評価ランク',
+      '最新_合計スコア',
+      '最新_面接日',
+      '面接回数'
+    ];
+
+    const existingColumns = new Set(headers);
+    const columnsToAdd = requiredColumns.filter(col => !existingColumns.has(col));
+
+    if (columnsToAdd.length === 0) {
+      Logger.log('必要な列は既に存在します');
+      return { success: true, message: '列は既に存在します' };
+    }
+
+    // 列を追加
+    const startColumn = lastColumn + 1;
+    columnsToAdd.forEach((colName, index) => {
+      sheet.getRange(1, startColumn + index).setValue(colName);
+    });
+
+    Logger.log(`${columnsToAdd.length}列を追加しました: ${columnsToAdd.join(', ')}`);
+
+    return {
+      success: true,
+      columnsAdded: columnsToAdd.length,
+      columns: columnsToAdd
+    };
+
+  } catch (error) {
+    Logger.log('ERROR in addCandidatesMasterColumns: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * Candidate_Scoresシートを更新する関数
+ * Engagement_Logから最新の承諾可能性・評価を取得して更新
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {Object} 更新結果
+ */
+function updateCandidateScores(candidateId) {
+  try {
+    Logger.log('=== updateCandidateScores 開始 ===');
+    Logger.log('候補者ID: ' + candidateId);
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    // Engagement_Logから最新データを取得
+    const engagementSheet = ss.getSheetByName('Engagement_Log');
+    if (!engagementSheet) {
+      throw new Error('Engagement_Logシートが見つかりません');
+    }
+
+    const engagementData = engagementSheet.getDataRange().getValues();
+    const engagementHeaders = engagementData[0];
+
+    // 列インデックスを取得
+    const candidateIdColIndex = engagementHeaders.indexOf('candidate_id');
+    const acceptanceRateColIndex = engagementHeaders.indexOf('acceptance_rate_ai');
+    const confidenceLevelColIndex = engagementHeaders.indexOf('confidence_level');
+    const motivationScoreColIndex = engagementHeaders.indexOf('motivation_score');
+    const timestampColIndex = engagementHeaders.indexOf('timestamp');
+
+    // 該当候補者のデータを抽出（最新のもの）
+    let latestEngagement = null;
+    let latestTimestamp = null;
+
+    for (let i = engagementData.length - 1; i >= 1; i--) {
+      const row = engagementData[i];
+      if (row[candidateIdColIndex] === candidateId) {
+        const timestamp = new Date(row[timestampColIndex]);
+        if (!latestTimestamp || timestamp > latestTimestamp) {
+          latestTimestamp = timestamp;
+          latestEngagement = {
+            acceptance_rate_ai: row[acceptanceRateColIndex] || 0,
+            confidence_level: row[confidenceLevelColIndex] || '',
+            motivation_score: row[motivationScoreColIndex] || 0,
+            timestamp: row[timestampColIndex]
+          };
+        }
+      }
+    }
+
+    if (!latestEngagement) {
+      Logger.log('該当候補者のEngagement_Logデータが見つかりません');
+      return { success: false, message: 'データなし' };
+    }
+
+    Logger.log('最新データ: ' + JSON.stringify(latestEngagement));
+
+    // Candidate_Scoresシートを更新
+    const scoresSheet = ss.getSheetByName('Candidate_Scores');
+    if (!scoresSheet) {
+      throw new Error('Candidate_Scoresシートが見つかりません');
+    }
+
+    const scoresData = scoresSheet.getDataRange().getValues();
+    const scoresHeaders = scoresData[0];
+
+    // 列インデックスを取得
+    const scoresCandidateIdColIndex = scoresHeaders.indexOf('candidate_id');
+    const latestAcceptanceColIndex = scoresHeaders.indexOf('最新_承諾可能性（AI予測）');
+    const confidenceColIndex = scoresHeaders.indexOf('予測の信頼度');
+    const motivationColIndex = scoresHeaders.indexOf('志望度スコア');
+
+    // 該当候補者の行を探す
+    let targetRow = -1;
+    for (let i = 1; i < scoresData.length; i++) {
+      if (scoresData[i][scoresCandidateIdColIndex] === candidateId) {
+        targetRow = i + 1; // スプレッドシートは1始まり
+        break;
+      }
+    }
+
+    if (targetRow === -1) {
+      Logger.log('Candidate_Scoresに該当候補者が見つかりません');
+      return { success: false, message: '候補者なし' };
+    }
+
+    // データを更新
+    scoresSheet.getRange(targetRow, latestAcceptanceColIndex + 1).setValue(latestEngagement.acceptance_rate_ai);
+    scoresSheet.getRange(targetRow, confidenceColIndex + 1).setValue(latestEngagement.confidence_level);
+    scoresSheet.getRange(targetRow, motivationColIndex + 1).setValue(latestEngagement.motivation_score);
+
+    Logger.log('✅ Candidate_Scores更新完了: 行' + targetRow);
+
+    return {
+      success: true,
+      candidateId: candidateId,
+      row: targetRow,
+      updated: {
+        acceptance_rate: latestEngagement.acceptance_rate_ai,
+        confidence_level: latestEngagement.confidence_level,
+        motivation_score: latestEngagement.motivation_score
+      }
+    };
+
+  } catch (error) {
+    Logger.log('ERROR in updateCandidateScores: ' + error.toString());
+    Logger.log('Stack: ' + error.stack);
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * Candidates_Masterシートを更新する関数
+ * Candidate_ScoresとEvaluation_Masterから最新データを集計
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {Object} 更新結果
+ */
+function updateCandidatesMaster(candidateId) {
+  try {
+    Logger.log('=== updateCandidatesMaster 開始 ===');
+    Logger.log('候補者ID: ' + candidateId);
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    // Candidate_Scoresから最新データを取得
+    const scoresSheet = ss.getSheetByName('Candidate_Scores');
+    if (!scoresSheet) {
+      throw new Error('Candidate_Scoresシートが見つかりません');
+    }
+
+    const scoresData = scoresSheet.getDataRange().getValues();
+    const scoresHeaders = scoresData[0];
+
+    const scoresCandidateIdColIndex = scoresHeaders.indexOf('candidate_id');
+    const latestAcceptanceColIndex = scoresHeaders.indexOf('最新_承諾可能性（AI予測）');
+
+    let latestAcceptance = null;
+    for (let i = 1; i < scoresData.length; i++) {
+      if (scoresData[i][scoresCandidateIdColIndex] === candidateId) {
+        latestAcceptance = scoresData[i][latestAcceptanceColIndex];
+        break;
+      }
+    }
+
+    // Evaluation_Masterから最新の評価データを取得
+    const evalSheet = ss.getSheetByName('Evaluation_Master');
+    if (!evalSheet) {
+      throw new Error('Evaluation_Masterシートが見つかりません');
+    }
+
+    const evalData = evalSheet.getDataRange().getValues();
+    const evalHeaders = evalData[0];
+
+    const evalCandidateIdColIndex = evalHeaders.indexOf('candidate_id');
+    const totalRankColIndex = evalHeaders.indexOf('total_rank');
+    const totalScoreColIndex = evalHeaders.indexOf('total_score');
+    const interviewDateColIndex = evalHeaders.indexOf('interview_date');
+
+    // 該当候補者の最新評価を取得
+    let latestEval = null;
+    let latestDate = null;
+    let interviewCount = 0;
+
+    for (let i = evalData.length - 1; i >= 1; i--) {
+      const row = evalData[i];
+      if (row[evalCandidateIdColIndex] === candidateId) {
+        interviewCount++;
+
+        const interviewDate = new Date(row[interviewDateColIndex]);
+        if (!latestDate || interviewDate > latestDate) {
+          latestDate = interviewDate;
+          latestEval = {
+            total_rank: row[totalRankColIndex] || '',
+            total_score: row[totalScoreColIndex] || 0,
+            interview_date: row[interviewDateColIndex]
+          };
+        }
+      }
+    }
+
+    if (!latestEval) {
+      Logger.log('Evaluation_Masterにデータがありません');
+      latestEval = {
+        total_rank: '',
+        total_score: 0,
+        interview_date: ''
+      };
+    }
+
+    Logger.log('集計データ: ' + JSON.stringify({
+      latestAcceptance: latestAcceptance,
+      latestEval: latestEval,
+      interviewCount: interviewCount
+    }));
+
+    // Candidates_Masterシートを更新
+    const masterSheet = ss.getSheetByName('Candidates_Master');
+    if (!masterSheet) {
+      throw new Error('Candidates_Masterシートが見つかりません');
+    }
+
+    const masterData = masterSheet.getDataRange().getValues();
+    const masterHeaders = masterData[0];
+
+    // 列インデックスを取得
+    const masterCandidateIdColIndex = masterHeaders.indexOf('candidate_id');
+    const latestAcceptanceMasterColIndex = masterHeaders.indexOf('最新_承諾可能性');
+    const latestRankColIndex = masterHeaders.indexOf('最新_評価ランク');
+    const latestScoreColIndex = masterHeaders.indexOf('最新_合計スコア');
+    const latestInterviewDateColIndex = masterHeaders.indexOf('最新_面接日');
+    const interviewCountColIndex = masterHeaders.indexOf('面接回数');
+
+    // 該当候補者の行を探す
+    let targetRow = -1;
+    for (let i = 1; i < masterData.length; i++) {
+      if (masterData[i][masterCandidateIdColIndex] === candidateId) {
+        targetRow = i + 1; // スプレッドシートは1始まり
+        break;
+      }
+    }
+
+    if (targetRow === -1) {
+      Logger.log('Candidates_Masterに該当候補者が見つかりません');
+      return { success: false, message: '候補者なし' };
+    }
+
+    // データを更新
+    if (latestAcceptanceMasterColIndex !== -1) {
+      masterSheet.getRange(targetRow, latestAcceptanceMasterColIndex + 1).setValue(latestAcceptance || '');
+    }
+
+    if (latestRankColIndex !== -1) {
+      masterSheet.getRange(targetRow, latestRankColIndex + 1).setValue(latestEval.total_rank);
+    }
+
+    if (latestScoreColIndex !== -1) {
+      masterSheet.getRange(targetRow, latestScoreColIndex + 1).setValue(latestEval.total_score);
+    }
+
+    if (latestInterviewDateColIndex !== -1) {
+      masterSheet.getRange(targetRow, latestInterviewDateColIndex + 1).setValue(latestEval.interview_date);
+    }
+
+    if (interviewCountColIndex !== -1) {
+      masterSheet.getRange(targetRow, interviewCountColIndex + 1).setValue(interviewCount);
+    }
+
+    Logger.log('✅ Candidates_Master更新完了: 行' + targetRow);
+
+    return {
+      success: true,
+      candidateId: candidateId,
+      row: targetRow,
+      updated: {
+        acceptance: latestAcceptance,
+        rank: latestEval.total_rank,
+        score: latestEval.total_score,
+        interview_date: latestEval.interview_date,
+        interview_count: interviewCount
+      }
+    };
+
+  } catch (error) {
+    Logger.log('ERROR in updateCandidatesMaster: ' + error.toString());
+    Logger.log('Stack: ' + error.stack);
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * Phase 4-2a機能のテスト関数
+ */
+function testPhase42aFunctions() {
+  Logger.log('=== Phase 4-2a テスト開始 ===');
+
+  // テスト用の候補者ID（実際に存在するものを使用）
+  const testCandidateId = 'CAND_20251226012324'; // ← 実際のIDに置き換え
+
+  Logger.log('テスト候補者ID: ' + testCandidateId);
+
+  // updateCandidateScoresのテスト
+  Logger.log('\n--- updateCandidateScores テスト ---');
+  const scoresResult = updateCandidateScores(testCandidateId);
+  Logger.log('結果: ' + JSON.stringify(scoresResult, null, 2));
+
+  // updateCandidatesMasterのテスト
+  Logger.log('\n--- updateCandidatesMaster テスト ---');
+  const masterResult = updateCandidatesMaster(testCandidateId);
+  Logger.log('結果: ' + JSON.stringify(masterResult, null, 2));
+
+  Logger.log('\n=== Phase 4-2a テスト完了 ===');
+
+  if (scoresResult.success && masterResult.success) {
+    Logger.log('✅ 全テスト成功');
+    return true;
+  } else {
+    Logger.log('❌ テスト失敗');
+    return false;
+  }
 }
