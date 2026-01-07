@@ -3278,3 +3278,164 @@ function diagnoseSpecificCandidate(targetCandidateId) {
 
   Logger.log('\n=== 候補者データ診断完了 ===');
 }
+
+/**
+ * Phase 4-2a 包括的診断関数
+ * 問題箇所を特定するための詳細診断
+ */
+function diagnosePhase42aComplete() {
+  Logger.log('========================================');
+  Logger.log('Phase 4-2a 包括的診断開始');
+  Logger.log('========================================');
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  // ===== 診断1: シート存在確認 =====
+  Logger.log('\n【診断1: シート存在確認】');
+  const requiredSheets = ['Candidates_Master', 'Candidate_Scores', 'Evaluation_Master', 'Engagement_Log'];
+  requiredSheets.forEach(sheetName => {
+    const sheet = ss.getSheetByName(sheetName);
+    if (sheet) {
+      Logger.log('✅ ' + sheetName + ' 存在');
+    } else {
+      Logger.log('❌ ' + sheetName + ' 存在しない！');
+    }
+  });
+
+  // ===== 診断2: Evaluation_Master列名確認 =====
+  Logger.log('\n【診断2: Evaluation_Master列名確認】');
+  const evalSheet = ss.getSheetByName('Evaluation_Master');
+  if (evalSheet) {
+    const evalHeaders = evalSheet.getRange(1, 1, 1, evalSheet.getLastColumn()).getValues()[0];
+
+    Logger.log('全ヘッダー: ' + JSON.stringify(evalHeaders));
+
+    const requiredEvalCols = {
+      '候補者ID': evalHeaders.indexOf('候補者ID'),
+      '総合ランク': evalHeaders.indexOf('総合ランク'),
+      '総合スコア': evalHeaders.indexOf('総合スコア'),
+      '面接日時': evalHeaders.indexOf('面接日時')
+    };
+
+    Object.keys(requiredEvalCols).forEach(colName => {
+      const index = requiredEvalCols[colName];
+      if (index !== -1) {
+        Logger.log('✅ ' + colName + ' → 列' + (index + 1));
+      } else {
+        Logger.log('❌ ' + colName + ' が見つからない！');
+        // 類似の列名を探す
+        evalHeaders.forEach((header, i) => {
+          if (header && (header.toString().includes('候補') ||
+              header.toString().includes('ランク') ||
+              header.toString().includes('スコア') ||
+              header.toString().includes('日時') ||
+              header.toString().includes('ID'))) {
+            Logger.log('   → 類似列発見: 列' + (i + 1) + ' = "' + header + '"');
+          }
+        });
+      }
+    });
+
+    // 英語列名も確認
+    Logger.log('\n【英語列名の確認（旧形式）】');
+    const englishCols = ['candidate_id', 'total_rank', 'total_score', 'interview_date'];
+    englishCols.forEach(colName => {
+      const index = evalHeaders.indexOf(colName);
+      if (index !== -1) {
+        Logger.log('⚠️ 英語列名 "' + colName + '" が存在 → 列' + (index + 1));
+      }
+    });
+  }
+
+  // ===== 診断3: Candidates_Master列名確認 =====
+  Logger.log('\n【診断3: Candidates_Master列名確認】');
+  const masterSheet = ss.getSheetByName('Candidates_Master');
+  if (masterSheet) {
+    const masterHeaders = masterSheet.getRange(1, 1, 1, masterSheet.getLastColumn()).getValues()[0];
+
+    const requiredMasterCols = ['candidate_id', '最新_評価ランク', '最新_合計スコア', '最新_面接日', '面接回数'];
+    requiredMasterCols.forEach(colName => {
+      const index = masterHeaders.indexOf(colName);
+      if (index !== -1) {
+        Logger.log('✅ ' + colName + ' → 列' + (index + 1));
+      } else {
+        Logger.log('❌ ' + colName + ' が見つからない！');
+      }
+    });
+  }
+
+  // ===== 診断4: 最新候補者のデータ確認 =====
+  Logger.log('\n【診断4: 最新候補者のデータ確認】');
+
+  // Candidates_Masterの最新行
+  if (masterSheet) {
+    const masterData = masterSheet.getDataRange().getValues();
+    const lastRow = masterData.length;
+    if (lastRow > 1) {
+      const lastCandidate = masterData[lastRow - 1];
+      const masterHeaders = masterData[0];
+      const candidateIdIndex = masterHeaders.indexOf('candidate_id');
+      const latestCandidateId = lastCandidate[candidateIdIndex];
+
+      Logger.log('最新候補者ID: ' + latestCandidateId);
+      Logger.log('最新候補者名: ' + lastCandidate[masterHeaders.indexOf('氏名')]);
+
+      // この候補者がEvaluation_Masterに存在するか
+      if (evalSheet) {
+        const evalData = evalSheet.getDataRange().getValues();
+        const evalHeaders = evalData[0];
+        const evalCandidateIdIndex = evalHeaders.indexOf('候補者ID');
+
+        Logger.log('Evaluation_Master検索（候補者ID列: ' + (evalCandidateIdIndex + 1) + '）');
+
+        let found = false;
+        for (let i = 1; i < evalData.length; i++) {
+          if (evalData[i][evalCandidateIdIndex] === latestCandidateId) {
+            found = true;
+            Logger.log('✅ Evaluation_Masterに発見: 行' + (i + 1));
+            Logger.log('   総合ランク: ' + evalData[i][evalHeaders.indexOf('総合ランク')]);
+            Logger.log('   総合スコア: ' + evalData[i][evalHeaders.indexOf('総合スコア')]);
+            Logger.log('   面接日時: ' + evalData[i][evalHeaders.indexOf('面接日時')]);
+            break;
+          }
+        }
+
+        if (!found) {
+          Logger.log('❌ Evaluation_Masterに該当データなし');
+          // 最後の3行を表示
+          Logger.log('Evaluation_Master最後の3行:');
+          for (let i = Math.max(1, evalData.length - 3); i < evalData.length; i++) {
+            Logger.log('  行' + (i + 1) + ': ' + evalData[i][evalCandidateIdIndex]);
+          }
+        }
+      }
+    }
+  }
+
+  // ===== 診断5: updateCandidatesMaster関数テスト =====
+  Logger.log('\n【診断5: updateCandidatesMaster関数テスト】');
+
+  // 最新の候補者IDで実行
+  if (masterSheet) {
+    const masterData = masterSheet.getDataRange().getValues();
+    const lastRow = masterData.length;
+    if (lastRow > 1) {
+      const candidateIdIndex = masterData[0].indexOf('candidate_id');
+      const latestCandidateId = masterData[lastRow - 1][candidateIdIndex];
+
+      Logger.log('テスト実行: updateCandidatesMaster("' + latestCandidateId + '")');
+
+      try {
+        const result = updateCandidatesMaster(latestCandidateId);
+        Logger.log('結果: ' + JSON.stringify(result, null, 2));
+      } catch (error) {
+        Logger.log('❌ エラー発生: ' + error.toString());
+        Logger.log('スタック: ' + error.stack);
+      }
+    }
+  }
+
+  Logger.log('\n========================================');
+  Logger.log('Phase 4-2a 包括的診断完了');
+  Logger.log('========================================');
+}
