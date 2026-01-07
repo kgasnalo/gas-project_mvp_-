@@ -1303,9 +1303,16 @@ function doPost(e) {
       Utilities.sleep(1000);
       Logger.log('1秒待機完了');
 
-      // 候補者IDを取得
-      const candidateId = (candidateMasterData && candidateMasterData.candidate_id) ||
+      // 候補者IDを取得（トップレベル、candidates_master、evaluation_masterの順で探す）
+      const candidateId = data.candidate_id ||
+                          (candidateMasterData && candidateMasterData.candidate_id) ||
                           (evalData && evalData.candidate_id);
+
+      Logger.log('candidateId取得元チェック:');
+      Logger.log('  data.candidate_id: ' + (data.candidate_id || 'なし'));
+      Logger.log('  candidateMasterData.candidate_id: ' + (candidateMasterData && candidateMasterData.candidate_id || 'なし'));
+      Logger.log('  evalData.candidate_id: ' + (evalData && evalData.candidate_id || 'なし'));
+      Logger.log('  最終candidateId: ' + (candidateId || 'なし'));
 
       if (candidateId) {
         Logger.log('集計対象候補者ID: ' + candidateId);
