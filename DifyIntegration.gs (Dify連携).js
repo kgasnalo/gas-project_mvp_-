@@ -1292,56 +1292,109 @@ function doPost(e) {
     Logger.log('=== レポート生成V2完了 ===');
 
     // ===== Phase 4-2a: データ集計 =====
+    Logger.log('========================================');
     Logger.log('=== Phase 4-2a: データ集計開始 ===');
+    Logger.log('========================================');
 
     try {
-      // 重要: 書き込みを強制的に完了させる
-      SpreadsheetApp.flush();
-      Logger.log('SpreadsheetApp.flush() 実行完了');
+      // デバッグ: dataオブジェクトの確認
+      Logger.log('DEBUG: dataオブジェクト確認');
+      Logger.log('  data.candidates_master exists: ' + (data.candidates_master ? 'YES' : 'NO'));
+      Logger.log('  data.candidate_scores exists: ' + (data.candidate_scores ? 'YES' : 'NO'));
+      Logger.log('  data.evaluation_master exists: ' + (data.evaluation_master ? 'YES' : 'NO'));
 
-      // 少し待機（書き込み完了を確実にする）
-      Utilities.sleep(1000);
-      Logger.log('1秒待機完了');
+      // 候補者IDを取得（dataオブジェクトから直接取得）
+      // 注意: candidateMasterDataとevalDataはスコープ外なので使用しない
+      var phase42aCandidateId = null;
 
-      // 候補者IDを取得（トップレベル、candidates_master、evaluation_masterの順で探す）
-      const candidateId = data.candidate_id ||
-                          (candidateMasterData && candidateMasterData.candidate_id) ||
-                          (evalData && evalData.candidate_id);
+      // 優先順位1: data.candidates_master.candidate_id
+      if (data.candidates_master) {
+        var cm = typeof data.candidates_master === 'string'
+          ? JSON.parse(data.candidates_master)
+          : data.candidates_master;
+        if (cm && cm.candidate_id) {
+          phase42aCandidateId = cm.candidate_id;
+          Logger.log('DEBUG: candidateId取得成功 from candidates_master: ' + phase42aCandidateId);
+        }
+      }
 
-      Logger.log('candidateId取得元チェック:');
-      Logger.log('  data.candidate_id: ' + (data.candidate_id || 'なし'));
-      Logger.log('  candidateMasterData.candidate_id: ' + (candidateMasterData && candidateMasterData.candidate_id || 'なし'));
-      Logger.log('  evalData.candidate_id: ' + (evalData && evalData.candidate_id || 'なし'));
-      Logger.log('  最終candidateId: ' + (candidateId || 'なし'));
+      // 優先順位2: data.candidate_scores.candidate_id
+      if (!phase42aCandidateId && data.candidate_scores) {
+        var cs = typeof data.candidate_scores === 'string'
+          ? JSON.parse(data.candidate_scores)
+          : data.candidate_scores;
+        if (cs && cs.candidate_id) {
+          phase42aCandidateId = cs.candidate_id;
+          Logger.log('DEBUG: candidateId取得成功 from candidate_scores: ' + phase42aCandidateId);
+        }
+      }
 
-      if (candidateId) {
-        Logger.log('集計対象候補者ID: ' + candidateId);
+      // 優先順位3: data.evaluation_master.candidate_id
+      if (!phase42aCandidateId && data.evaluation_master) {
+        var em = typeof data.evaluation_master === 'string'
+          ? JSON.parse(data.evaluation_master)
+          : data.evaluation_master;
+        if (em && em.candidate_id) {
+          phase42aCandidateId = em.candidate_id;
+          Logger.log('DEBUG: candidateId取得成功 from evaluation_master: ' + phase42aCandidateId);
+        }
+      }
+
+      // 優先順位4: トップレベルのdata.candidate_id
+      if (!phase42aCandidateId && data.candidate_id) {
+        phase42aCandidateId = data.candidate_id;
+        Logger.log('DEBUG: candidateId取得成功 from data.candidate_id: ' + phase42aCandidateId);
+      }
+
+      Logger.log('DEBUG: 最終candidateId = ' + (phase42aCandidateId || 'null'));
+
+      if (phase42aCandidateId) {
+        Logger.log('✅ 集計対象候補者ID: ' + phase42aCandidateId);
+
+        // 重要: 書き込みを強制的に完了させる
+        SpreadsheetApp.flush();
+        Logger.log('SpreadsheetApp.flush() 実行完了');
+
+        // 少し待機（書き込み完了を確実にする）
+        Utilities.sleep(1000);
+        Logger.log('1秒待機完了');
 
         // Candidate_Scoresを更新
-        const scoresUpdateResult = updateCandidateScores(candidateId);
+        Logger.log('--- updateCandidateScores 呼び出し ---');
+        var scoresUpdateResult = updateCandidateScores(phase42aCandidateId);
+        Logger.log('updateCandidateScores結果: ' + JSON.stringify(scoresUpdateResult));
         if (scoresUpdateResult.success) {
-          Logger.log('✅ Candidate_Scores更新成功: ' + JSON.stringify(scoresUpdateResult.updated));
+          Logger.log('✅ Candidate_Scores更新成功');
         } else {
-          Logger.log('⚠️ Candidate_Scores更新失敗: ' + (scoresUpdateResult.message || scoresUpdateResult.error));
+          Logger.log('⚠️ Candidate_Scores更新失敗: ' + (scoresUpdateResult.message || scoresUpdateResult.error || 'unknown'));
         }
 
         // Candidates_Masterを更新
-        const masterUpdateResult = updateCandidatesMaster(candidateId);
+        Logger.log('--- updateCandidatesMaster 呼び出し ---');
+        var masterUpdateResult = updateCandidatesMaster(phase42aCandidateId);
+        Logger.log('updateCandidatesMaster結果: ' + JSON.stringify(masterUpdateResult));
         if (masterUpdateResult.success) {
-          Logger.log('✅ Candidates_Master更新成功: ' + JSON.stringify(masterUpdateResult.updated));
+          Logger.log('✅ Candidates_Master更新成功');
         } else {
-          Logger.log('⚠️ Candidates_Master更新失敗: ' + (masterUpdateResult.message || masterUpdateResult.error));
+          Logger.log('⚠️ Candidates_Master更新失敗: ' + (masterUpdateResult.message || masterUpdateResult.error || 'unknown'));
         }
 
+        Logger.log('========================================');
         Logger.log('=== Phase 4-2a: データ集計完了 ===');
+        Logger.log('========================================');
       } else {
-        Logger.log('⚠️ 候補者IDが見つかりません。集計をスキップします。');
+        Logger.log('========================================');
+        Logger.log('⚠️ candidateIdが取得できませんでした');
+        Logger.log('集計をスキップします');
+        Logger.log('========================================');
       }
 
     } catch (error) {
-      Logger.log('❌ ERROR in Phase 4-2a集計: ' + error.toString());
-      Logger.log('Stack: ' + error.stack);
-      // エラーがあっても処理は継続
+      Logger.log('========================================');
+      Logger.log('❌ ERROR in Phase 4-2a集計');
+      Logger.log('Error: ' + error.toString());
+      Logger.log('Stack: ' + (error.stack || 'no stack'));
+      Logger.log('========================================');
     }
 
     // 6. Dify_Workflow_Log追加
