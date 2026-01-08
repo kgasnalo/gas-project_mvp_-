@@ -3,6 +3,46 @@
  * Difyとの連携機能を管理
  */
 
+// ============================================================
+// Candidates_Master 列マッピング定義
+// ※シートの列構成が変更された場合はここを修正
+// ============================================================
+
+/**
+ * Candidates_Masterの列名マッピング
+ * 値はヘッダー名（動的にインデックスを取得するため）
+ */
+const CANDIDATES_MASTER_COLUMN_NAMES = {
+  // 基本情報
+  CANDIDATE_ID: 'candidate_id',
+  NAME: '氏名',
+  EMAIL: 'メールアドレス',
+  STATUS: '現在ステータス',
+  RECRUIT_TYPE: '採用区分',
+  LAST_UPDATE: '最終更新日時',
+  APPLICATION_DATE: '応募日',
+
+  // AI評価関連
+  LATEST_PASS_RATE: '最新_合格可能性',
+  LATEST_ACCEPTANCE: '最新_承諾可能性',
+  LATEST_ACCEPTANCE_AI: '最新_承諾可能性（AI予測）',
+  TOTAL_RANK: '総合ランク',
+
+  // 評価詳細
+  LATEST_EVAL_RANK: '最新_評価ランク',
+  LATEST_TOTAL_SCORE: '最新_合計スコア',
+  LATEST_INTERVIEW_DATE: '最新_面接日',
+  INTERVIEW_COUNT: '面接回数',
+
+  // スコア詳細
+  LATEST_PHILOSOPHY: '最新_Philosophy',
+  LATEST_STRATEGY: '最新_Strategy',
+  LATEST_MOTIVATION: '最新_Motivation',
+  LATEST_EXECUTION: '最新_Execution'
+};
+
+// ============================================================
+
 /**
  * Webhook URLを取得（デプロイ後に設定）
  *
@@ -788,6 +828,349 @@ function updateOrInsertCandidatesMaster(data) {
   }
 }
 
+// ============================================================
+// ★★★ 包括的Candidates_Master書き込み関数（修正版）★★★
+// Difyからの完全なレスポンスデータを受け取り、全列に正しく書き込む
+// ============================================================
+
+/**
+ * Candidates_Masterに包括的にデータを書き込む（修正版）
+ * 複数のデータソース（candidates_master, candidate_scores, evaluation_master, engagement_log）から
+ * データを統合してCandidates_Masterシートに書き込む
+ *
+ * @param {Object} fullData - Difyからの完全なレスポンスデータ
+ * @return {Object} - 更新結果 { success, candidate_id, row, action }
+ */
+function writeToCandidatesMasterComprehensive(fullData) {
+  try {
+    Logger.log('=== writeToCandidatesMasterComprehensive 開始 ===');
+    Logger.log('受信データキー: ' + Object.keys(fullData || {}).join(', '));
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Candidates_Master');
+
+    if (!sheet) {
+      throw new Error('Candidates_Masterシートが見つかりません');
+    }
+
+    // データソースを展開
+    const candidatesMasterData = fullData.candidates_master || {};
+    const candidateScoresData = fullData.candidate_scores || {};
+    const evaluationMasterData = fullData.evaluation_master || {};
+    const engagementLogData = fullData.engagement_log || {};
+
+    // candidate_idを取得（複数ソースから優先順位で取得）
+    const candidateId = candidatesMasterData.candidate_id
+      || candidateScoresData.candidate_id
+      || evaluationMasterData.candidate_id
+      || '';
+
+    if (!candidateId) {
+      throw new Error('candidate_idが見つかりません');
+    }
+
+    Logger.log('候補者ID: ' + candidateId);
+
+    // ヘッダーと既存データを取得
+    const dataRange = sheet.getDataRange();
+    const values = dataRange.getValues();
+    const headers = values[0];
+
+    // 列インデックスをヘッダーから動的に取得
+    const colIndexes = {};
+    headers.forEach((header, index) => {
+      colIndexes[header] = index + 1; // 1-indexed for setRange
+    });
+
+    Logger.log('利用可能な列: ' + Object.keys(colIndexes).join(', '));
+
+    // 既存行を検索
+    const candidateIdColIndex = headers.indexOf('candidate_id');
+    let targetRow = -1;
+    let existingInterviewCount = 0;
+
+    for (let i = 1; i < values.length; i++) {
+      if (values[i][candidateIdColIndex] === candidateId) {
+        targetRow = i + 1; // 1-indexed
+        // 既存の面接回数を取得
+        const interviewCountColIdx = headers.indexOf('面接回数');
+        if (interviewCountColIdx !== -1) {
+          const existingValue = values[i][interviewCountColIdx];
+          if (typeof existingValue === 'number' && !isNaN(existingValue)) {
+            // パーセント値として入力された場合の補正（0.01 → 1）
+            if (existingValue < 1 && existingValue > 0) {
+              existingInterviewCount = Math.round(existingValue * 100);
+            } else {
+              existingInterviewCount = Math.round(existingValue);
+            }
+          }
+        }
+        break;
+      }
+    }
+
+    // 新規の場合は最終行+1
+    const isNewRecord = (targetRow === -1);
+    if (isNewRecord) {
+      targetRow = sheet.getLastRow() + 1;
+    }
+
+    Logger.log(`対象行: ${targetRow} (${isNewRecord ? '新規' : '更新'})`);
+
+    // ★★★ データマッピング: Dify出力 → Candidates_Master列 ★★★
+    const dataMapping = {
+      // 基本情報（candidates_masterから）
+      'candidate_id': candidateId,
+      '氏名': candidatesMasterData['氏名'] || candidatesMasterData.candidate_name || candidateScoresData['氏名'] || '',
+      '現在ステータス': candidatesMasterData['現在ステータス'] || evaluationMasterData.selection_phase || '',
+      '採用区分': candidatesMasterData['採用区分'] || evaluationMasterData.recruit_type || '',
+      '最終更新日時': new Date(),
+      '応募日': candidatesMasterData['応募日'] || '',
+
+      // AI評価データ（evaluation_master + candidate_scoresから）
+      // ★修正: 最新_合格可能性 = 合計スコア（total_score）を使用
+      '最新_合格可能性': evaluationMasterData.total_score || candidateScoresData['最新_合計スコア'] || '',
+
+      // ★修正: 最新_承諾可能性 = AI予測値（0-100の値）
+      '最新_承諾可能性': engagementLogData.acceptance_rate_ai || candidateScoresData['最新_承諾可能性（AI予測）'] || '',
+      '最新_承諾可能性（AI予測）': engagementLogData.acceptance_rate_ai || candidateScoresData['最新_承諾可能性（AI予測）'] || '',
+
+      // ★修正: 総合ランク = evaluation_master.total_rank ("A"/"B"/"C"/"D")
+      '総合ランク': evaluationMasterData.total_rank || '',
+
+      // ★修正: 最新_評価ランク = evaluation_master.total_rank
+      '最新_評価ランク': evaluationMasterData.total_rank || '',
+
+      // ★修正: 最新_合計スコア = evaluation_master.total_score（数値）
+      '最新_合計スコア': evaluationMasterData.total_score || candidateScoresData['最新_合計スコア'] || '',
+
+      // ★修正: 最新_面接日 = evaluation_master.interview_date
+      '最新_面接日': evaluationMasterData.interview_date || evaluationMasterData.interview_datetime || '',
+
+      // ★修正: 面接回数 = 既存値+1 または 新規なら1
+      '面接回数': isNewRecord ? 1 : (existingInterviewCount + 1),
+
+      // スコア詳細（candidate_scoresまたはevaluation_masterから）
+      '最新_Philosophy': candidateScoresData['最新_Philosophy'] || evaluationMasterData.philosophy_score || '',
+      '最新_Strategy': candidateScoresData['最新_Strategy'] || evaluationMasterData.strategy_score || '',
+      '最新_Motivation': candidateScoresData['最新_Motivation'] || evaluationMasterData.motivation_score || '',
+      '最新_Execution': candidateScoresData['最新_Execution'] || evaluationMasterData.execution_score || '',
+
+      // 志望度・信頼度
+      '志望度スコア': candidateScoresData['志望度スコア'] || evaluationMasterData.motivation_score || '',
+      '予測の信頼度': candidateScoresData['予測の信頼度'] || engagementLogData.confidence_level || ''
+    };
+
+    Logger.log('=== データマッピング内容 ===');
+    Logger.log('  総合ランク: ' + dataMapping['総合ランク']);
+    Logger.log('  最新_評価ランク: ' + dataMapping['最新_評価ランク']);
+    Logger.log('  最新_合計スコア: ' + dataMapping['最新_合計スコア']);
+    Logger.log('  最新_面接日: ' + dataMapping['最新_面接日']);
+    Logger.log('  面接回数: ' + dataMapping['面接回数']);
+    Logger.log('  最新_合格可能性: ' + dataMapping['最新_合格可能性']);
+
+    // 各列にデータを書き込む
+    const updatedColumns = [];
+    Object.keys(dataMapping).forEach(columnName => {
+      const colIndex = colIndexes[columnName];
+      const value = dataMapping[columnName];
+
+      if (colIndex && value !== undefined && value !== null && value !== '') {
+        const cell = sheet.getRange(targetRow, colIndex);
+        cell.setValue(value);
+
+        // ★数値列の書式設定（パーセント書式を防ぐ）
+        if (['最新_合計スコア', '面接回数', '最新_合格可能性', '最新_Philosophy', '最新_Strategy', '最新_Motivation', '最新_Execution'].includes(columnName)) {
+          cell.setNumberFormat('0'); // 数値書式（整数）
+        }
+
+        updatedColumns.push(columnName);
+      }
+    });
+
+    // 書き込み確定
+    SpreadsheetApp.flush();
+
+    Logger.log(`✅ Candidates_Master${isNewRecord ? '追加' : '更新'}完了: ${candidateId} (行${targetRow})`);
+    Logger.log(`  更新列: ${updatedColumns.join(', ')}`);
+
+    return {
+      success: true,
+      candidate_id: candidateId,
+      row: targetRow,
+      action: isNewRecord ? 'INSERTED' : 'UPDATED',
+      updatedColumns: updatedColumns
+    };
+
+  } catch (error) {
+    Logger.log('❌ ERROR in writeToCandidatesMasterComprehensive: ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * 面接回数を計算（ヘルパー関数）
+ * Evaluation_Masterから該当候補者のレコード数をカウント
+ *
+ * @param {string} candidateId - 候補者ID
+ * @return {number} - 面接回数
+ */
+function calculateInterviewCountFromEvaluation(candidateId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const evalSheet = ss.getSheetByName('Evaluation_Master');
+
+    if (!evalSheet) {
+      Logger.log('⚠️ Evaluation_Masterシートが見つかりません');
+      return 1;
+    }
+
+    const data = evalSheet.getDataRange().getValues();
+    const headers = data[0];
+    const candidateIdColIndex = headers.indexOf('候補者ID');
+
+    if (candidateIdColIndex === -1) {
+      // 英語のカラム名も試す
+      const altIndex = headers.indexOf('candidate_id');
+      if (altIndex === -1) {
+        Logger.log('⚠️ Evaluation_Masterに候補者ID列が見つかりません');
+        return 1;
+      }
+    }
+
+    let count = 0;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][candidateIdColIndex] === candidateId) {
+        count++;
+      }
+    }
+
+    return count > 0 ? count : 1;
+
+  } catch (error) {
+    Logger.log('⚠️ calculateInterviewCountFromEvaluation エラー: ' + error.toString());
+    return 1;
+  }
+}
+
+/**
+ * 面接回数列の書式を修正（パーセント → 数値）
+ * 既存データの書式問題を修正するユーティリティ関数
+ */
+function fixInterviewCountFormat() {
+  try {
+    Logger.log('=== fixInterviewCountFormat 開始 ===');
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Candidates_Master');
+
+    if (!sheet) {
+      throw new Error('Candidates_Masterシートが見つかりません');
+    }
+
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const interviewCountColIndex = headers.indexOf('面接回数');
+
+    if (interviewCountColIndex === -1) {
+      Logger.log('⚠️ 面接回数列が見つかりません');
+      return { success: false, message: '面接回数列が見つかりません' };
+    }
+
+    const colNumber = interviewCountColIndex + 1; // 1-indexed
+    const lastRow = sheet.getLastRow();
+
+    if (lastRow < 2) {
+      Logger.log('データ行がありません');
+      return { success: true, message: 'データ行なし', fixedCount: 0 };
+    }
+
+    const range = sheet.getRange(2, colNumber, lastRow - 1, 1);
+
+    // 書式を数値に変更
+    range.setNumberFormat('0');
+
+    // 値を再設定（パーセント値を修正）
+    const values = range.getValues();
+    let fixedCount = 0;
+
+    const fixedValues = values.map(row => {
+      const val = row[0];
+      if (typeof val === 'number') {
+        // 0.01のような値を1に修正（パーセントとして入力された場合）
+        if (val < 1 && val > 0) {
+          fixedCount++;
+          return [Math.round(val * 100)];
+        }
+        return [Math.round(val)];
+      } else if (val === '' || val === null || val === undefined) {
+        return [''];
+      }
+      return [1]; // デフォルト値
+    });
+
+    range.setValues(fixedValues);
+    SpreadsheetApp.flush();
+
+    Logger.log(`✅ 面接回数列の書式修正完了（${lastRow - 1}行中${fixedCount}行を修正）`);
+
+    return {
+      success: true,
+      message: `${fixedCount}行の値を修正しました`,
+      totalRows: lastRow - 1,
+      fixedCount: fixedCount
+    };
+
+  } catch (error) {
+    Logger.log('❌ ERROR in fixInterviewCountFormat: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * 最新_合計スコア列の書式を修正（パーセント → 数値）
+ */
+function fixTotalScoreFormat() {
+  try {
+    Logger.log('=== fixTotalScoreFormat 開始 ===');
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Candidates_Master');
+
+    if (!sheet) {
+      throw new Error('Candidates_Masterシートが見つかりません');
+    }
+
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const scoreColIndex = headers.indexOf('最新_合計スコア');
+
+    if (scoreColIndex === -1) {
+      Logger.log('⚠️ 最新_合計スコア列が見つかりません');
+      return { success: false, message: '最新_合計スコア列が見つかりません' };
+    }
+
+    const colNumber = scoreColIndex + 1;
+    const lastRow = sheet.getLastRow();
+
+    if (lastRow < 2) {
+      return { success: true, message: 'データ行なし', fixedCount: 0 };
+    }
+
+    const range = sheet.getRange(2, colNumber, lastRow - 1, 1);
+    range.setNumberFormat('0'); // 数値書式
+
+    SpreadsheetApp.flush();
+    Logger.log('✅ 最新_合計スコア列の書式修正完了');
+
+    return { success: true };
+
+  } catch (error) {
+    Logger.log('❌ ERROR in fixTotalScoreFormat: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+// ============================================================
+
 /**
  * Candidate_Scoresシートにスコアデータを追記
  *
@@ -1009,6 +1392,37 @@ function doPost(e) {
 
       results.evaluation_master = writeToEvaluationMaster(evaluationMasterData);
       Logger.log('✅ Evaluation_Master: ' + results.evaluation_master);
+    }
+
+    // ★★★ 6. Candidates_Master包括的更新（修正版）★★★
+    // 全データソースからCandidates_Masterの追加列を更新
+    try {
+      Logger.log('=== Candidates_Master包括的更新開始 ===');
+
+      // 全データをパースして準備
+      const fullDataForMaster = {
+        candidates_master: typeof data.candidates_master === 'string'
+          ? JSON.parse(data.candidates_master)
+          : (data.candidates_master || {}),
+        candidate_scores: typeof data.candidate_scores === 'string'
+          ? JSON.parse(data.candidate_scores)
+          : (data.candidate_scores || {}),
+        evaluation_master: evaluationMasterData || {},
+        engagement_log: typeof data.engagement_log === 'string'
+          ? JSON.parse(data.engagement_log)
+          : (data.engagement_log || {})
+      };
+
+      // 包括的更新を実行
+      const comprehensiveResult = writeToCandidatesMasterComprehensive(fullDataForMaster);
+      Logger.log('✅ Candidates_Master包括的更新: ' + JSON.stringify(comprehensiveResult));
+
+      // 結果を更新
+      results.candidates_master_comprehensive = comprehensiveResult;
+
+    } catch (comprehensiveError) {
+      Logger.log('⚠️ Candidates_Master包括的更新エラー: ' + comprehensiveError.toString());
+      // エラーでも処理を継続（既存の基本更新は完了しているため）
     }
 
     // === レポート生成処理（V2版） ===
