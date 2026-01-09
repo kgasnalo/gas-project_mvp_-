@@ -844,7 +844,15 @@ function updateOrInsertCandidatesMaster(data) {
 function writeToCandidatesMasterComprehensive(fullData) {
   try {
     Logger.log('=== writeToCandidatesMasterComprehensive 開始 ===');
-    Logger.log('受信データキー: ' + Object.keys(fullData || {}).join(', '));
+
+    // ★null/undefinedチェック
+    if (!fullData || typeof fullData !== 'object') {
+      Logger.log('❌ ERROR: fullDataがnullまたはundefinedです');
+      Logger.log('  fullData: ' + JSON.stringify(fullData));
+      throw new Error('fullDataが渡されていません。この関数はdoPost経由で呼び出す必要があります。');
+    }
+
+    Logger.log('受信データキー: ' + Object.keys(fullData).join(', '));
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName('Candidates_Master');
@@ -853,7 +861,7 @@ function writeToCandidatesMasterComprehensive(fullData) {
       throw new Error('Candidates_Masterシートが見つかりません');
     }
 
-    // データソースを展開
+    // データソースを展開（nullセーフ）
     const candidatesMasterData = fullData.candidates_master || {};
     const candidateScoresData = fullData.candidate_scores || {};
     const evaluationMasterData = fullData.evaluation_master || {};
@@ -1178,6 +1186,56 @@ function fixTotalScoreFormat() {
 
   } catch (error) {
     Logger.log('❌ ERROR in fixTotalScoreFormat: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * ★テスト用関数: writeToCandidatesMasterComprehensiveを手動テスト
+ * GASエディタから実行して動作確認できます
+ */
+function testWriteToCandidatesMasterComprehensive() {
+  Logger.log('=== テスト開始: writeToCandidatesMasterComprehensive ===');
+
+  // テスト用のダミーデータ（Dify出力をシミュレート）
+  const testData = {
+    candidates_master: {
+      candidate_id: 'CAND_TEST_' + Date.now(),
+      '氏名': 'テスト候補者',
+      '採用区分': '新卒',
+      '現在ステータス': '初回面談',
+      '応募日': '2026-01-09 10:00'
+    },
+    candidate_scores: {
+      '最新_Philosophy': 25,
+      '最新_Strategy': 26,
+      '最新_Motivation': 18,
+      '最新_Execution': 19,
+      '最新_合計スコア': 88,
+      '最新_承諾可能性（AI予測）': 75,
+      '予測の信頼度': 'HIGH',
+      '志望度スコア': 18
+    },
+    evaluation_master: {
+      candidate_id: 'CAND_TEST_' + Date.now(),
+      total_rank: 'B',
+      total_score: 88,
+      interview_date: '2026-01-09 10:00'  // ★これがテストのポイント
+    },
+    engagement_log: {
+      acceptance_rate_ai: 75,
+      confidence_level: 'HIGH'
+    }
+  };
+
+  Logger.log('テストデータ: ' + JSON.stringify(testData, null, 2));
+
+  try {
+    const result = writeToCandidatesMasterComprehensive(testData);
+    Logger.log('✅ テスト成功: ' + JSON.stringify(result));
+    return result;
+  } catch (error) {
+    Logger.log('❌ テスト失敗: ' + error.toString());
     return { success: false, error: error.toString() };
   }
 }
