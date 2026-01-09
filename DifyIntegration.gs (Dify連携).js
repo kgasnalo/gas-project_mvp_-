@@ -969,6 +969,19 @@ function writeToCandidatesMasterComprehensive(fullData) {
     Logger.log('  面接回数: ' + dataMapping['面接回数']);
     Logger.log('  最新_合格可能性: ' + dataMapping['最新_合格可能性']);
 
+    // ★デバッグ: evaluationMasterDataの内容を確認
+    Logger.log('=== evaluationMasterData デバッグ ===');
+    Logger.log('  evaluationMasterData keys: ' + Object.keys(evaluationMasterData).join(', '));
+    Logger.log('  interview_date: ' + evaluationMasterData.interview_date);
+    Logger.log('  interview_datetime: ' + evaluationMasterData.interview_datetime);
+    Logger.log('  typeof interview_date: ' + typeof evaluationMasterData.interview_date);
+
+    // ★デバッグ: 列インデックスを確認
+    Logger.log('=== 列インデックス確認 ===');
+    Logger.log('  最新_面接日 colIndex: ' + colIndexes['最新_面接日']);
+    Logger.log('  最新_合計スコア colIndex: ' + colIndexes['最新_合計スコア']);
+    Logger.log('  面接回数 colIndex: ' + colIndexes['面接回数']);
+
     // 各列にデータを書き込む
     const updatedColumns = [];
     Object.keys(dataMapping).forEach(columnName => {
