@@ -380,7 +380,7 @@ function writeToEvaluationMaster(data) {
   // 行データの組み立て
   const row = [
     evaluationId,                           // A: 評価ID
-    convertToJST(data.interview_datetime) || '', // B: 面接日時（日本時間に変換）
+    convertToJST(data.interview_datetime || data.interview_date) || '', // B: 面接日時（日本時間に変換）★interview_dateも対応
     data.candidate_id || '',                // C: 候補者ID
     data.candidate_name || '',              // D: 候補者氏名
     data.recruit_type || '',                // E: 採用区分
@@ -3614,11 +3614,14 @@ function updateCandidatesMaster(candidateId) {
       Logger.log('⚠️ 最新_合計スコア列がないためスキップ');
     }
 
-    if (latestInterviewDateColIndex !== -1) {
+    if (latestInterviewDateColIndex !== -1 && latestEval.interview_date) {
+      // ★空の値で上書きしないようにチェック追加
       Logger.log('最新_面接日を更新: ' + latestEval.interview_date);
       masterSheet.getRange(targetRow, latestInterviewDateColIndex + 1).setValue(latestEval.interview_date);
-    } else {
+    } else if (latestInterviewDateColIndex === -1) {
       Logger.log('⚠️ 最新_面接日列がないためスキップ');
+    } else {
+      Logger.log('⚠️ 最新_面接日の値が空のためスキップ（既存値を保持）');
     }
 
     if (interviewCountColIndex !== -1) {
