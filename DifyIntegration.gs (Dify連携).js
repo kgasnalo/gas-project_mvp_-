@@ -1240,6 +1240,96 @@ function testWriteToCandidatesMasterComprehensive() {
   }
 }
 
+/**
+ * ★デバッグ用：最新_面接日列への直接書き込みテスト
+ * 列名の文字エンコーディング問題を特定します
+ */
+function testWriteInterviewDateDirectly() {
+  Logger.log('=== 最新_面接日 直接書き込みテスト ===');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Candidates_Master');
+
+  if (!sheet) {
+    Logger.log('❌ シートが見つかりません');
+    return;
+  }
+
+  // ヘッダーを取得
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // 「面接」を含むヘッダーを詳細に出力（文字コード含む）
+  Logger.log('=== 「面接」を含むヘッダー詳細 ===');
+  headers.forEach((header, index) => {
+    const headerStr = header.toString();
+    if (headerStr.includes('面接') || headerStr.includes('日')) {
+      const charCodes = [];
+      for (let i = 0; i < headerStr.length; i++) {
+        charCodes.push(headerStr.charCodeAt(i));
+      }
+      Logger.log(`列${index + 1}: "${headerStr}" (長さ:${headerStr.length}, 文字コード:[${charCodes.join(',')}])`);
+    }
+  });
+
+  // 「最新_面接日」を検索
+  const targetColumnName = '最新_面接日';
+  const targetCharCodes = [];
+  for (let i = 0; i < targetColumnName.length; i++) {
+    targetCharCodes.push(targetColumnName.charCodeAt(i));
+  }
+  Logger.log(`\n検索する列名: "${targetColumnName}" (長さ:${targetColumnName.length}, 文字コード:[${targetCharCodes.join(',')}])`);
+
+  // 完全一致を検索
+  let colIndex = headers.indexOf(targetColumnName);
+  Logger.log(`indexOf結果: ${colIndex} (${colIndex === -1 ? '見つからない' : '列' + (colIndex + 1)})`);
+
+  // 部分一致も試す
+  Logger.log('\n=== 部分一致検索 ===');
+  let foundIndex = -1;
+  headers.forEach((header, index) => {
+    const headerStr = header.toString();
+    if (headerStr.includes('最新') && headerStr.includes('面接')) {
+      Logger.log(`部分一致発見: 列${index + 1} = "${headerStr}"`);
+      foundIndex = index;
+    }
+  });
+
+  if (foundIndex >= 0) {
+    // この列に直接書き込みテスト
+    const testRow = sheet.getLastRow(); // 最後の行
+    const testValue = '2026-01-13 TEST';
+    const colNum = foundIndex + 1;
+
+    Logger.log(`\n=== 書き込みテスト ===`);
+    Logger.log(`対象: 行${testRow}, 列${colNum}`);
+    Logger.log(`書き込む値: "${testValue}"`);
+
+    try {
+      const cell = sheet.getRange(testRow, colNum);
+      Logger.log(`セル参照: ${cell.getA1Notation()}`);
+
+      cell.setValue(testValue);
+      SpreadsheetApp.flush();
+
+      // 読み戻して確認
+      const readBack = sheet.getRange(testRow, colNum).getValue();
+      Logger.log(`読み戻し結果: "${readBack}"`);
+
+      if (readBack.toString() === testValue) {
+        Logger.log('✅ 書き込み成功！');
+      } else {
+        Logger.log('❌ 書き込み失敗（値が異なる）');
+        Logger.log(`  期待値: "${testValue}"`);
+        Logger.log(`  実際値: "${readBack}"`);
+      }
+    } catch (e) {
+      Logger.log('❌ 書き込みエラー: ' + e.toString());
+    }
+  } else {
+    Logger.log('❌ 「最新」と「面接」を含む列が見つかりません');
+  }
+}
+
 // ============================================================
 
 /**
